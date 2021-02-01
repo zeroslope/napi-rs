@@ -1,4 +1,5 @@
-import { execSync } from 'child_process'
+import { execSync, exec } from 'child_process'
+import { watchFile } from 'fs'
 import { join, parse, sep } from 'path'
 
 import chalk from 'chalk'
@@ -22,6 +23,12 @@ export class BuildCommand extends Command {
 
   @Command.Boolean(`--release`)
   isRelease = false
+
+  @Command.Boolean(`--watch,-w`)
+  watch = false
+
+  @Command.Boolean(`--cargo-watch`)
+  cargoWatch = false
 
   @Command.String('--config,-c')
   configFileName?: string
@@ -72,13 +79,20 @@ export class BuildCommand extends Command {
     ]
       .filter((flag) => Boolean(flag))
       .join(' ')
-    const cargoCommand = `cargo build ${externalFlags}`
+    const cargoCommand = `build ${externalFlags}`
     debug(`Run ${chalk.green(cargoCommand)}`)
-    execSync(cargoCommand, {
-      env: process.env,
-      stdio: 'inherit',
-      cwd,
-    })
+    if (!this.cargoWatch) {
+      execSync(`cargo ${cargoCommand}`, {
+        env: process.env,
+        stdio: 'inherit',
+        cwd,
+      })
+    } else {
+      exec(`cargo watch -x "${cargoCommand}"`, {
+        cwd,
+        env: process.env,
+      })
+    }
     const { binaryName } = getNapiConfig(this.configFileName)
     let dylibName = this.cargoName
     if (!dylibName) {
@@ -174,13 +188,31 @@ export class BuildCommand extends Command {
 
     const sourcePath = join(dir, 'target', targetDir, `${dylibName}${libExt}`)
 
-    if (await existsAsync(distModulePath)) {
-      debug(`remove old binary [${chalk.yellowBright(sourcePath)}]`)
-      await unlinkAsync(distModulePath)
+    async function moveBinary() {
+      if (await existsAsync(distModulePath)) {
+        debug(`remove old binary [${chalk.yellowBright(sourcePath)}]`)
+        await unlinkAsync(distModulePath)
+      }
+
+      debug(`Write binary content to [${chalk.yellowBright(distModulePath)}]`)
+      await copyFileAsync(sourcePath, distModulePath)
     }
 
-    debug(`Write binary content to [${chalk.yellowBright(distModulePath)}]`)
-    await copyFileAsync(sourcePath, distModulePath)
+    if (this.watch || this.cargoWatch) {
+      watchFile(sourcePath, () => {
+        console.info(chalk.cyanBright(`${sourcePath} changed, rebuild it.`))
+        moveBinary()
+          .then(() => {
+            console.info(chalk.greenBright(`Rebuild ${sourcePath} succeed.`))
+          })
+          .catch((error) => {
+            console.error(error)
+            process.exit(1)
+          })
+      })
+    } else {
+      await moveBinary()
+    }
   }
 }
 
