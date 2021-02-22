@@ -31,9 +31,11 @@
     "format:rs": "cargo fmt",
     "format:source": "prettier --config ./package.json --write './**/*.{js,ts}'",
     "format:yaml": "prettier --parser yaml --write './**/*.{yml,yaml}'",
-    "lint": "eslint -c .eslintrc.yml './src/**/*.ts' './test_module/**/*.{ts,js}'",
-    "prepublishOnly": "npm run build",
-    "test": "ava"
+    "lint": "eslint -c .eslintrc.yml './cli/**/*.ts' './test_module/**/*.{ts,js}'",
+    "prepublishOnly": "npm run build && pinst --disable",
+    "test": "ava",
+    "postinstall": "husky install",
+    "postpublish": "pinst --enable"
   },
   "bugs": {
     "url": "https://github.com/napi-rs/napi-rs/issues"
@@ -58,23 +60,12 @@
     "trailingComma": "all",
     "arrowParens": "always"
   },
-  "files": [
-    "scripts",
-    "LICENSE"
-  ],
+  "files": ["scripts", "LICENSE"],
   "lint-staged": {
-    "*.js": [
-      "prettier --write"
-    ],
-    "*.@(yml|yaml)": [
-      "prettier --parser yaml --write"
-    ],
-    "*.json": [
-      "prettier --parser json --write"
-    ],
-    "*.md": [
-      "prettier --parser markdown --write"
-    ]
+    "*.js": ["prettier --write"],
+    "*.@(yml|yaml)": ["prettier --parser yaml --write"],
+    "*.json": ["prettier --parser json --write"],
+    "*.md": ["prettier --parser markdown --write"]
   },
   "husky": {
     "hooks": {
