@@ -3,9 +3,9 @@ extern crate napi_derive;
 
 use napi::{Env, JsObject, Result};
 
-#[cfg(all(unix, not(target_env = "musl"), not(target_arch = "aarch64")))]
-#[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+// #[cfg(all(unix, not(target_env = "musl"), not(target_arch = "aarch64")))]
+// #[global_allocator]
+// static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 #[cfg(all(windows, not(target_arch = "aarch64")))]
 #[global_allocator]
@@ -18,6 +18,7 @@ mod get_set_property;
 mod get_value_from_js;
 mod noop;
 mod plus;
+mod query;
 
 #[module_exports]
 fn init(mut exports: JsObject, env: Env) -> Result<()> {
@@ -29,6 +30,7 @@ fn init(mut exports: JsObject, env: Env) -> Result<()> {
   get_set_property::register_js(&mut exports, &env)?;
   create_array::register_js(&mut exports)?;
   get_value_from_js::register_js(&mut exports)?;
+  query::register_js(&mut exports)?;
 
   Ok(())
 }
