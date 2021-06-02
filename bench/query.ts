@@ -14,10 +14,12 @@ export const benchQuery = () =>
   b.suite(
     'Query',
     b.add('napi-rs', async () => {
-      await query(e)
+      await Promise.all(Array.from({ length: 100 }).map(() => query(e)))
     }),
     b.add('neon', async () => {
-      await engineQueryAsync()
+      await Promise.all(
+        Array.from({ length: 100 }).map(() => engineQueryAsync()),
+      )
     }),
 
     b.cycle(),

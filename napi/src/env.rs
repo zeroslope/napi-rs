@@ -32,8 +32,6 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 #[cfg(all(feature = "tokio_rt", feature = "napi4"))]
 use std::future::Future;
-#[cfg(all(feature = "tokio_rt", feature = "napi4"))]
-use tokio::sync::mpsc::error::TrySendError;
 
 pub type Callback = extern "C" fn(sys::napi_env, sys::napi_callback_info) -> sys::napi_value;
 
@@ -1105,17 +1103,8 @@ impl Env {
     let future_to_resolve = promise::resolve_from_future(future_promise.start()?, fut);
     let sender = get_tokio_sender().clone();
     sender
-      .try_send(Message::Task(Box::pin(future_to_resolve)))
-      .map_err(|e| match e {
-        TrySendError::Full(_) => Error::new(
-          Status::QueueFull,
-          "Failed to run future: no available capacity".to_owned(),
-        ),
-        TrySendError::Closed(_) => Error::new(
-          Status::Closing,
-          "Failed to run future: receiver closed".to_string(),
-        ),
-      })?;
+      .send(Message::Task(Box::pin(future_to_resolve)))
+      .map_err(|e| Error::new(Status::Closing, format!("{}", e)))?;
     Ok(unsafe { JsObject::from_raw_unchecked(self.0, raw_promise) })
   }
 

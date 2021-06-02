@@ -5,9 +5,8 @@ pub struct QueryEngine {
   datamodel: String,
 }
 
-unsafe impl Sync for QueryEngine {}
-
 impl QueryEngine {
+  #[inline(always)]
   pub async fn query(&self) -> String {
     let data = serde_json::json!({
         "findFirstBooking": {
@@ -33,6 +32,33 @@ impl QueryEngine {
 
     serde_json::to_string(&data).unwrap()
   }
+
+  #[inline(always)]
+  pub async fn query_buffer(&self) -> Vec<u8> {
+    let data = serde_json::json!({
+        "findFirstBooking": {
+            "id": "ckovh15xa104945sj64rdk8oas",
+            "name": "1883da9ff9152",
+            "forename": "221c99bedc6a4",
+            "description": "8bf86b62ce6a",
+            "email": "9d57a869661cc",
+            "phone": "7e0c58d147215",
+            "arrivalDate": -92229669,
+            "departureDate": 202138795,
+            "price": -1592700387,
+            "advance": -369294193,
+            "advanceDueDate": 925000428,
+            "kids": 520124290,
+            "adults": 1160258464,
+            "status": "NO_PAYMENT",
+            "nourishment": "BB",
+            "createdAt": "2021-05-19T12:58:37.246Z",
+            "room": { "id": "ckovh15xa104955sj6r2tqaw1c", "name": "38683b87f2664" }
+        }
+    });
+
+    serde_json::to_vec(&data).unwrap()
+  }
 }
 
 #[js_function(1)]
@@ -56,8 +82,21 @@ fn query(ctx: CallContext) -> napi::Result<JsObject> {
     })
 }
 
+#[js_function(1)]
+fn query_buffer(ctx: CallContext) -> napi::Result<JsObject> {
+  let ext = ctx.get::<JsExternal>(0)?;
+  let qe = ctx.env.get_value_external::<QueryEngine>(&ext)?;
+  let qe = qe.clone();
+  ctx
+    .env
+    .execute_tokio_future(async move { Ok(qe.query_buffer().await) }, |env, v| {
+      env.create_buffer_with_data(v).map(|v| v.into_raw())
+    })
+}
+
 pub fn register_js(exports: &mut JsObject) -> napi::Result<()> {
   exports.create_named_method("engine", new_engine)?;
   exports.create_named_method("query", query)?;
+  exports.create_named_method("queryBuffer", query_buffer)?;
   Ok(())
 }
