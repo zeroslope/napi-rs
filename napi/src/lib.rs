@@ -93,6 +93,8 @@ mod status;
 mod task;
 #[cfg(feature = "napi3")]
 pub use cleanup_env::CleanupEnvHook;
+#[cfg(feature = "node-stream")]
+mod stream;
 #[cfg(feature = "napi4")]
 pub mod threadsafe_function;
 #[cfg(all(feature = "tokio_rt", feature = "napi4"))]
