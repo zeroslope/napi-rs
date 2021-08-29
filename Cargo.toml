@@ -8,6 +8,8 @@ members = [
   "./test_module",
   "./bench",
   "./memory-testing",
+  "./serializer",
+  "./serializer-wasm",
 ]
 
 [profile.release]
