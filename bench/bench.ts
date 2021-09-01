@@ -11,17 +11,19 @@ import { benchGetSetProperty } from './get-set-property'
 import { benchNoop } from './noop'
 import { benchPlus } from './plus'
 import { benchQuery } from './query'
+import { benchSer } from './ser'
 
 async function run() {
   const output = [
-    await benchNoop(),
-    await benchPlus(),
-    await benchBuffer(),
-    await benchCreateArray(),
-    await benchGetArray(),
-    await benchGetSetProperty(),
-    await benchAsync(),
-    await benchQuery(),
+    // await benchNoop(),
+    // await benchPlus(),
+    // await benchBuffer(),
+    // await benchCreateArray(),
+    // await benchGetArray(),
+    // await benchGetSetProperty(),
+    // await benchAsync(),
+    // await benchQuery(),
+    await benchSer(),
   ]
     .map(formatSummary)
     .join('\n')

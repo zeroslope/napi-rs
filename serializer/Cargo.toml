@@ -16,3 +16,6 @@ rkyv = "0.7"
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
+
+[build-dependencies]
+napi-build = {path = "../build"}
