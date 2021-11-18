@@ -1,7 +1,0 @@
-[target.i686-pc-windows-msvc]
-rustflags = [
-  "-C",
-  "force-frame-pointers=yes",
-  "-C",
-  "linker-flavor=lld-link",
-]

@@ -134,7 +134,7 @@ impl NapiEnum {
           napi::sys::napi_create_object(env, obj_ptr.as_mut_ptr());
           println!("enum begin, env: {:p}", env);
           let obj_ptr = obj_ptr.assume_init();
-          #(#define_properties)*
+          // #(#define_properties)*
 
           obj_ptr
 
