@@ -1,5 +1,6 @@
-use crate::{bindgen_prelude::*, check_status, sys, Error, Result, Status};
+use crate::{bindgen_prelude::*, check_status, sys, Result};
 
+use std::ffi::CString;
 use std::fmt::Display;
 #[cfg(feature = "latin1")]
 use std::mem;
@@ -18,19 +19,20 @@ impl TypeName for String {
 
 impl ToNapiValue for String {
   unsafe fn to_napi_value(env: sys::napi_env, val: Self) -> Result<sys::napi_value> {
-    let mut ptr = ptr::null_mut();
-
+    let mut result = std::mem::MaybeUninit::uninit();
+    let len = val.len();
+    let c_string = CString::from_vec_unchecked(val.into_bytes().to_vec());
     check_status!(
       sys::napi_create_string_utf8(
         env,
-        val.as_ptr() as *const _,
-        val.len() as sys::size_t,
-        &mut ptr
+        c_string.as_ptr(),
+        len as sys::size_t,
+        result.as_mut_ptr(),
       ),
       "Failed to convert rust `String` into napi `string`"
     )?;
 
-    Ok(ptr)
+    Ok(result.assume_init())
   }
 }
 
@@ -45,7 +47,7 @@ impl FromNapiValue for String {
 
     // end char len in C
     let len = len.assume_init() + 1;
-    let mut ret = vec![0u8; len as usize];
+    let mut ret = Vec::with_capacity(len as usize);
 
     let mut written_char_count = std::mem::MaybeUninit::uninit();
 
@@ -60,7 +62,8 @@ impl FromNapiValue for String {
       "Failed to convert napi `string` into rust type `String`"
     )?;
 
-    let _ = written_char_count.assume_init();
+    let new_len = written_char_count.assume_init();
+    ret.set_len(new_len as usize);
     Ok(String::from_utf8_unchecked(ret))
   }
 }
@@ -116,17 +119,15 @@ impl TypeName for Utf16String {
 
 impl FromNapiValue for Utf16String {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
-    let mut len = 0;
+    let mut len = std::mem::MaybeUninit::uninit();
 
     check_status!(
-      sys::napi_get_value_string_utf16(env, napi_val, ptr::null_mut(), 0, &mut len),
+      sys::napi_get_value_string_utf16(env, napi_val, ptr::null_mut(), 0, len.as_mut_ptr()),
       "Failed to convert napi `utf16 string` into rust type `String`",
     )?;
-
-    // end char len in C
-    len += 1;
-    let mut ret = vec![0; len as usize];
-    let mut written_char_count = 0;
+    let len = len.assume_init() + 1;
+    let mut ret = Vec::with_capacity(len as usize);
+    let mut written_char_count = std::mem::MaybeUninit::uninit();
 
     check_status!(
       sys::napi_get_value_string_utf16(
@@ -134,20 +135,15 @@ impl FromNapiValue for Utf16String {
         napi_val,
         ret.as_mut_ptr(),
         len,
-        &mut written_char_count
+        written_char_count.as_mut_ptr(),
       ),
       "Failed to convert napi `utf16 string` into rust type `String`",
     )?;
 
-    let (_, ret) = ret.split_last().unwrap_or((&0, &[]));
+    let written_char_count = written_char_count.assume_init() as usize;
+    ret.set_len(written_char_count);
 
-    match String::from_utf16(ret) {
-      Err(e) => Err(Error::new(
-        Status::InvalidArg,
-        format!("Failed to read utf16 string, {}", e),
-      )),
-      Ok(s) => Ok(Utf16String(s)),
-    }
+    Ok(Utf16String(String::from_utf16_lossy(&ret)))
   }
 }
 
