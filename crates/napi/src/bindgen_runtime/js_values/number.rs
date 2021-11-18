@@ -25,8 +25,7 @@ macro_rules! impl_number_conversions {
         #[cfg(all(target_os = "windows", target_arch = "x86"))]
         unsafe fn to_napi_value(env: $crate::sys::napi_env, val: $t) -> Result<$crate::sys::napi_value> {
           let mut ptr = std::mem::MaybeUninit::uninit();
-          println!("{:p} {}", env, val);
-          sys::$create(env, val, ptr.as_mut_ptr() as *mut _);
+          let _ = sys::$create(env, val, ptr.as_mut_ptr());
 
           Ok(ptr.assume_init())
         }
