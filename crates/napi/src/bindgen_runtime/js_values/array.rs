@@ -12,7 +12,7 @@ impl Array {
     let mut ptr = ptr::null_mut();
     unsafe {
       check_status!(
-        sys::napi_create_array_with_length(env, len as usize, &mut ptr),
+        sys::napi_create_array_with_length(env, len as sys::size_t, &mut ptr),
         "Failed to create napi Array"
       )?;
     }

@@ -139,7 +139,7 @@ impl Env {
           true => 1,
           false => 0,
         },
-        len,
+        len as sys::size_t,
         words.as_ptr(),
         &mut raw_value,
       )
@@ -170,7 +170,7 @@ impl Env {
     check_status!(sys::napi_create_string_utf8(
       self.0,
       data_ptr,
-      len,
+      len as sys::size_t,
       &mut raw_value
     ))?;
     Ok(JsString::from_raw_unchecked(self.0, raw_value))
@@ -179,7 +179,12 @@ impl Env {
   pub fn create_string_utf16(&self, chars: &[u16]) -> Result<JsString> {
     let mut raw_value = ptr::null_mut();
     check_status!(unsafe {
-      sys::napi_create_string_utf16(self.0, chars.as_ptr(), chars.len(), &mut raw_value)
+      sys::napi_create_string_utf16(
+        self.0,
+        chars.as_ptr(),
+        chars.len() as sys::size_t,
+        &mut raw_value,
+      )
     })?;
     Ok(unsafe { JsString::from_raw_unchecked(self.0, raw_value) })
   }
@@ -190,7 +195,7 @@ impl Env {
       sys::napi_create_string_latin1(
         self.0,
         chars.as_ptr() as *const _,
-        chars.len(),
+        chars.len() as sys::size_t,
         &mut raw_value,
       )
     })?;
@@ -232,7 +237,9 @@ impl Env {
 
   pub fn create_array_with_length(&self, length: usize) -> Result<JsObject> {
     let mut raw_value = ptr::null_mut();
-    check_status!(unsafe { sys::napi_create_array_with_length(self.0, length, &mut raw_value) })?;
+    check_status!(unsafe {
+      sys::napi_create_array_with_length(self.0, length as sys::size_t, &mut raw_value)
+    })?;
     Ok(unsafe { JsObject::from_raw_unchecked(self.0, raw_value) })
   }
 
@@ -242,7 +249,7 @@ impl Env {
     let mut data: Vec<u8> = Vec::with_capacity(length);
     let mut data_ptr = data.as_mut_ptr() as *mut c_void;
     check_status!(unsafe {
-      sys::napi_create_buffer(self.0, length, &mut data_ptr, &mut raw_value)
+      sys::napi_create_buffer(self.0, length as sys::size_t, &mut data_ptr, &mut raw_value)
     })?;
 
     Ok(JsBufferValue::new(
@@ -265,7 +272,7 @@ impl Env {
     check_status!(unsafe {
       sys::napi_create_external_buffer(
         self.0,
-        length,
+        length as sys::size_t,
         data_ptr as *mut c_void,
         Some(drop_buffer),
         Box::into_raw(Box::new((length, data.capacity()))) as *mut c_void,
@@ -301,7 +308,7 @@ impl Env {
     let mut raw_value = ptr::null_mut();
     check_status!(sys::napi_create_external_buffer(
       self.0,
-      length,
+      length as sys::size_t,
       data as *mut c_void,
       Some(
         raw_finalize_with_custom_callback::<Hint, Finalize>
@@ -349,7 +356,7 @@ impl Env {
     check_status!(unsafe {
       sys::napi_create_buffer_copy(
         self.0,
-        length,
+        length as sys::size_t,
         data_ptr as *mut c_void,
         &mut copy_data,
         &mut raw_value,
@@ -370,7 +377,7 @@ impl Env {
     let mut data: Vec<u8> = Vec::with_capacity(length as usize);
     let mut data_ptr = data.as_mut_ptr() as *mut c_void;
     check_status!(unsafe {
-      sys::napi_create_arraybuffer(self.0, length, &mut data_ptr, &mut raw_value)
+      sys::napi_create_arraybuffer(self.0, length as sys::size_t, &mut data_ptr, &mut raw_value)
     })?;
 
     Ok(JsArrayBufferValue::new(
@@ -388,7 +395,7 @@ impl Env {
       sys::napi_create_external_arraybuffer(
         self.0,
         data_ptr as *mut c_void,
-        length,
+        length as sys::size_t,
         Some(drop_buffer),
         Box::into_raw(Box::new((length, data.capacity()))) as *mut c_void,
         &mut raw_value,
@@ -427,7 +434,7 @@ impl Env {
     check_status!(sys::napi_create_external_arraybuffer(
       self.0,
       data as *mut c_void,
-      length,
+      length as sys::size_t,
       Some(
         raw_finalize_with_custom_callback::<Hint, Finalize>
           as unsafe extern "C" fn(
@@ -465,7 +472,7 @@ impl Env {
       sys::napi_create_function(
         self.0,
         name.as_ptr(),
-        len,
+        len as sys::size_t,
         Some(callback),
         ptr::null_mut(),
         &mut raw_result,
@@ -492,7 +499,7 @@ impl Env {
       sys::napi_create_function(
         self.0,
         name.as_ptr(),
-        len,
+        len as sys::size_t,
         Some({
           unsafe extern "C" fn trampoline<R: NapiRaw, F: Fn(CallContext<'_>) -> Result<R>>(
             raw_env: sys::napi_env,
@@ -517,7 +524,7 @@ impl Env {
                   );
                   argc
                 };
-                let mut raw_args = vec![ptr::null_mut(); argc];
+                let mut raw_args = vec![ptr::null_mut(); argc as usize];
                 let mut raw_this = ptr::null_mut();
                 let mut closure_data_ptr = ptr::null_mut();
 
@@ -674,9 +681,9 @@ impl Env {
     unsafe {
       sys::napi_fatal_error(
         location.as_ptr(),
-        location_len,
+        location_len as sys::size_t,
         message.as_ptr(),
-        message_len,
+        message_len as sys::size_t,
       )
     }
   }
@@ -709,10 +716,10 @@ impl Env {
       sys::napi_define_class(
         self.0,
         c_name.as_ptr() as *const c_char,
-        name.len(),
+        name.len() as sys::size_t,
         Some(constructor_cb),
         ptr::null_mut(),
-        raw_properties.len(),
+        raw_properties.len() as sys::size_t,
         raw_properties.as_ptr(),
         &mut raw_result,
       )

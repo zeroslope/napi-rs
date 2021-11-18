@@ -112,7 +112,7 @@ pub trait ValidateNapiValue: FromNapiValue + TypeName {
       return Ok(());
     }
 
-    let mut result = -1;
+    let mut result = 0;
     check_status!(
       sys::napi_typeof(env, napi_val, &mut result),
       "Failed to detect napi value type",

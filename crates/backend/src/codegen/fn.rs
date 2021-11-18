@@ -73,13 +73,13 @@ impl TryToTokens for NapiFn {
       #[allow(non_snake_case)]
       #[allow(clippy::all)]
       extern "C" fn #intermediate_ident(
-        env: napi::bindgen_prelude::sys::napi_env,
-        cb: napi::bindgen_prelude::sys::napi_callback_info
-      ) -> napi::bindgen_prelude::sys::napi_value {
+        env: napi::sys::napi_env,
+        cb: napi::sys::napi_callback_info
+      ) -> napi::sys::napi_value {
         unsafe {
           #function_call.unwrap_or_else(|e| {
             napi::bindgen_prelude::JsError::from(e).throw_into(env);
-            std::ptr::null_mut::<napi::bindgen_prelude::sys::napi_value__>()
+            std::ptr::null_mut::<napi::sys::napi_value__>()
           })
         }
       }
@@ -209,11 +209,11 @@ impl NapiFn {
         let mut ret_ptr = std::ptr::null_mut();
 
         napi::bindgen_prelude::check_status!(
-          napi::bindgen_prelude::sys::napi_call_function(
+          napi::sys::napi_call_function(
             env,
             cb.this(),
             cb.get_arg(#index),
-            args.len(),
+            args.len() as napi::sys::size_t,
             args.as_ptr(),
             &mut ret_ptr
           ),
@@ -303,18 +303,19 @@ impl NapiFn {
           unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
             let mut fn_ptr = std::mem::MaybeUninit::<napi::sys::napi_value>::uninit();
             let js_name_c_string = std::ffi::CString::from_vec_unchecked(#js_name.as_bytes().to_vec());
-            napi::bindgen_prelude::check_status!(
-              napi::bindgen_prelude::sys::napi_create_function(
+            napi::bindgen_prelude::check_status_or_throw!(
+              env,
+              napi::sys::napi_create_function(
                 env,
                 #js_name.as_ptr() as *const _,
-                #js_name_len,
+                #js_name_len as napi::sys::size_t,
                 Some(#intermediate_ident),
                 std::ptr::null_mut(),
                 fn_ptr.as_mut_ptr(),
               ),
               "Failed to register function `{}`",
               #name_str,
-            ).unwrap();
+            );
 
             fn_ptr.assume_init()
           }

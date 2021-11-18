@@ -169,12 +169,16 @@ macro_rules! impl_object_methods {
         let create_code_status = sys::napi_create_string_utf8(
           env,
           error_code_string.as_ptr(),
-          status_len,
+          status_len as sys::size_t,
           &mut error_code,
         );
         debug_assert!(create_code_status == sys::Status::napi_ok);
-        let create_reason_status =
-          sys::napi_create_string_utf8(env, reason.as_ptr(), reason_len, &mut reason_string);
+        let create_reason_status = sys::napi_create_string_utf8(
+          env,
+          reason.as_ptr(),
+          reason_len as sys::size_t,
+          &mut reason_string,
+        );
         debug_assert!(create_reason_status == sys::Status::napi_ok);
         let create_error_status = $kind(env, error_code, reason_string, &mut js_error);
         debug_assert!(create_error_status == sys::Status::napi_ok);
@@ -215,10 +219,20 @@ macro_rules! impl_object_methods {
         let mut reason_string = ptr::null_mut();
         let mut js_error = ptr::null_mut();
         check_status!(unsafe {
-          sys::napi_create_string_utf8(env, error_code_string.as_ptr(), status_len, &mut error_code)
+          sys::napi_create_string_utf8(
+            env,
+            error_code_string.as_ptr(),
+            status_len as sys::size_t,
+            &mut error_code,
+          )
         })?;
         check_status!(unsafe {
-          sys::napi_create_string_utf8(env, reason.as_ptr(), reason_len, &mut reason_string)
+          sys::napi_create_string_utf8(
+            env,
+            reason.as_ptr(),
+            reason_len as sys::size_t,
+            &mut reason_string,
+          )
         })?;
         check_status!(unsafe { $kind(env, error_code, reason_string, &mut js_error) })?;
         check_status!(unsafe { sys::napi_throw(env, js_error) })

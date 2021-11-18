@@ -64,10 +64,10 @@ impl FromNapiValue for Buffer {
     let mut len = 0;
 
     check_status!(
-      sys::napi_get_buffer_info(env, napi_val, &mut buf, &mut len as *mut usize),
+      sys::napi_get_buffer_info(env, napi_val, &mut buf, &mut len),
       "Failed to convert napi buffer into rust Vec<u8>"
     )?;
-
+    let len = len as usize;
     Ok(Self {
       inner: mem::ManuallyDrop::new(Vec::from_raw_parts(buf as *mut _, len, len)),
     })
@@ -81,7 +81,7 @@ impl ToNapiValue for Buffer {
     check_status!(
       sys::napi_create_external_buffer(
         env,
-        len,
+        len as sys::size_t,
         val.inner.as_mut_ptr() as *mut _,
         Some(drop_buffer),
         Box::into_raw(Box::new((len, val.inner.capacity()))) as *mut _,

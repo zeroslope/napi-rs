@@ -85,10 +85,10 @@ pub unsafe extern "C" fn napi_register_module_v1(
           sys::napi_define_class(
             env,
             js_name.as_ptr() as *const _,
-            js_name.len() - 1,
-            std::mem::transmute(ctor),
+            js_name.len() as sys::size_t - 1,
+            Some(ctor),
             ptr::null_mut(),
-            raw_props.len(),
+            raw_props.len() as sys::size_t,
             raw_props.as_ptr(),
             class_ptr.as_mut_ptr(),
           ),

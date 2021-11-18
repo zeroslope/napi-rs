@@ -58,7 +58,7 @@ impl JsFunction {
         self.0.env,
         raw_this,
         self.0.value,
-        args.len(),
+        args.len() as sys::size_t,
         raw_args.as_ptr(),
         &mut return_value,
       )
@@ -111,7 +111,7 @@ impl JsFunction {
       sys::napi_new_instance(
         self.0.env,
         self.0.value,
-        length,
+        length as sys::size_t,
         raw_args.as_ptr(),
         &mut js_instance,
       )

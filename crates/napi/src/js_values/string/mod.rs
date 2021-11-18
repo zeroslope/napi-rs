@@ -61,7 +61,7 @@ impl JsString {
         self.0.env,
         self.0.value,
         buf_ptr,
-        len,
+        len as sys::size_t,
         &mut written_char_count,
       )
     })?;
@@ -73,7 +73,7 @@ impl JsString {
   }
 
   pub fn into_utf16(self) -> Result<JsStringUtf16> {
-    let mut written_char_count = 0usize;
+    let mut written_char_count: sys::size_t = 0;
     let len = self.utf16_len()? + 1;
     let mut result = vec![0; len];
     let buf_ptr = result.as_mut_ptr();
@@ -82,7 +82,7 @@ impl JsString {
         self.0.env,
         self.0.value,
         buf_ptr,
-        len,
+        len as sys::size_t,
         &mut written_char_count,
       )
     })?;
@@ -94,7 +94,7 @@ impl JsString {
   }
 
   pub fn into_latin1(self) -> Result<JsStringLatin1> {
-    let mut written_char_count = 0usize;
+    let mut written_char_count = 0;
     let len = self.latin1_len()? + 1;
     let mut result = Vec::with_capacity(len);
     let buf_ptr = result.as_mut_ptr();
@@ -103,13 +103,13 @@ impl JsString {
         self.0.env,
         self.0.value,
         buf_ptr,
-        len,
+        len as sys::size_t,
         &mut written_char_count,
       )
     })?;
 
     mem::forget(result);
-
+    let written_char_count = written_char_count as usize;
     Ok(JsStringLatin1 {
       inner: self,
       buf: mem::ManuallyDrop::new(unsafe {

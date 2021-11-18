@@ -26,8 +26,8 @@ impl Display for ValueType {
   }
 }
 
-impl From<i32> for ValueType {
-  fn from(value: i32) -> ValueType {
+impl From<sys::napi_valuetype> for ValueType {
+  fn from(value: sys::napi_valuetype) -> ValueType {
     match value {
       #[cfg(feature = "napi6")]
       sys::ValueType::napi_bigint => ValueType::BigInt,

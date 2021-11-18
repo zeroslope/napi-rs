@@ -34,7 +34,7 @@ impl ToNapiValue for Symbol {
           check_status!(napi_sys::napi_create_string_utf8(
             env,
             desc_c_string.as_ptr(),
-            desc_len,
+            desc_len as crate::sys::size_t,
             &mut desc_string
           ))?;
           desc_string

@@ -25,10 +25,11 @@ pub struct JsBufferValue {
 impl JsBuffer {
   pub fn into_value(self) -> Result<JsBufferValue> {
     let mut data = ptr::null_mut();
-    let mut len: usize = 0;
+    let mut len = 0;
     check_status!(unsafe {
       sys::napi_get_buffer_info(self.0.env, self.0.value, &mut data, &mut len)
     })?;
+    let len = len as usize;
     Ok(JsBufferValue {
       data: mem::ManuallyDrop::new(unsafe { Vec::from_raw_parts(data as *mut _, len, len) }),
       value: self,
@@ -44,10 +45,9 @@ impl JsBufferValue {
   #[cfg(feature = "serde-json")]
   pub(crate) fn from_raw(env: sys::napi_env, value: sys::napi_value) -> Result<Self> {
     let mut data = ptr::null_mut();
-    let mut len = 0usize;
-    check_status!(unsafe {
-      sys::napi_get_buffer_info(env, value, &mut data, &mut len as *mut usize as *mut _)
-    })?;
+    let mut len = 0;
+    check_status!(unsafe { sys::napi_get_buffer_info(env, value, &mut data, &mut len) })?;
+    let len = len as usize;
     Ok(Self {
       value: JsBuffer(Value {
         env,

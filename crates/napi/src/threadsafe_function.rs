@@ -195,7 +195,12 @@ impl<T: 'static, ES: ErrorStrategy::T> ThreadsafeFunction<T, ES> {
     let len = s.len();
     let s = CString::new(s)?;
     check_status!(unsafe {
-      sys::napi_create_string_utf8(env, s.as_ptr(), len, &mut async_resource_name)
+      sys::napi_create_string_utf8(
+        env,
+        s.as_ptr(),
+        len as sys::size_t,
+        &mut async_resource_name,
+      )
     })?;
 
     let initial_thread_count = 1usize;
@@ -207,8 +212,8 @@ impl<T: 'static, ES: ErrorStrategy::T> ThreadsafeFunction<T, ES> {
         func,
         ptr::null_mut(),
         async_resource_name,
-        max_queue_size,
-        initial_thread_count,
+        max_queue_size as sys::size_t,
+        initial_thread_count as sys::size_t,
         ptr,
         Some(thread_finalize_cb::<T, V, R>),
         ptr,
@@ -382,7 +387,7 @@ unsafe extern "C" fn call_js_cb<T: 'static, V: NapiRaw, R, ES>(
         raw_env,
         recv,
         js_callback,
-        args.len(),
+        args.len() as sys::size_t,
         args.as_ptr(),
         ptr::null_mut(),
       );
@@ -422,7 +427,7 @@ unsafe extern "C" fn call_js_cb<T: 'static, V: NapiRaw, R, ES>(
       sys::napi_create_string_utf8(
         raw_env,
         error_code_string.as_ptr() as *const _,
-        error_code_string.len(),
+        error_code_string.len() as sys::size_t,
         &mut error_code_value
       ),
       sys::Status::napi_ok,
@@ -433,7 +438,7 @@ unsafe extern "C" fn call_js_cb<T: 'static, V: NapiRaw, R, ES>(
       sys::napi_create_string_utf8(
         raw_env,
         error_msg.as_ptr() as *const _,
-        error_msg.len(),
+        error_msg.len() as sys::size_t,
         &mut error_msg_value,
       ),
       sys::Status::napi_ok,

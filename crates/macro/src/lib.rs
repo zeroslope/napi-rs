@@ -140,7 +140,7 @@ pub fn js_function(attr: RawStream, input: RawStream) -> RawStream {
       use std::panic::{self, AssertUnwindSafe};
       use std::ffi::CString;
       use napi::{Env, Error, Status, NapiValue, NapiRaw, CallContext};
-      let mut argc = #arg_len_span as usize;
+      let mut argc = #arg_len_span;
       #[cfg(all(target_os = "windows", target_arch = "x86"))]
       let mut raw_args = vec![ptr::null_mut(); #arg_len_span];
       #[cfg(not(all(target_os = "windows", target_arch = "x86")))]
@@ -161,9 +161,9 @@ pub fn js_function(attr: RawStream, input: RawStream) -> RawStream {
 
       let mut env = unsafe { Env::from_raw(raw_env) };
       #[cfg(all(target_os = "windows", target_arch = "x86"))]
-      let ctx = CallContext::new(&mut env, cb_info, raw_this, raw_args.as_slice(), argc);
+      let ctx = CallContext::new(&mut env, cb_info, raw_this, raw_args.as_slice(), argc as usize);
       #[cfg(not(all(target_os = "windows", target_arch = "x86")))]
-      let ctx = CallContext::new(&mut env, cb_info, raw_this, &raw_args, argc);
+      let ctx = CallContext::new(&mut env, cb_info, raw_this, &raw_args, argc as usize);
       #execute_js_function
     }
   };

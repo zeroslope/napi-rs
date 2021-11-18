@@ -178,7 +178,7 @@ pub(crate) unsafe fn log_js_value<V: AsRef<[sys::napi_value]>>(
     env,
     console,
     method_js_fn,
-    values.as_ref().len(),
+    values.as_ref().len() as sys::size_t,
     values.as_ref().as_ptr(),
     ptr::null_mut(),
   );

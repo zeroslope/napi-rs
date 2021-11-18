@@ -108,7 +108,7 @@ impl From<sys::napi_typedarray_type> for TypedArrayType {
 
 impl From<TypedArrayType> for sys::napi_typedarray_type {
   fn from(value: TypedArrayType) -> sys::napi_typedarray_type {
-    value as i32
+    value as sys::napi_typedarray_type
   }
 }
 
@@ -129,14 +129,14 @@ impl JsArrayBuffer {
 
   pub fn into_value(self) -> Result<JsArrayBufferValue> {
     let mut data = ptr::null_mut();
-    let mut len: usize = 0;
+    let mut len: sys::size_t = 0;
     check_status!(unsafe {
-      sys::napi_get_arraybuffer_info(self.0.env, self.0.value, &mut data, &mut len as *mut usize)
+      sys::napi_get_arraybuffer_info(self.0.env, self.0.value, &mut data, &mut len)
     })?;
     Ok(JsArrayBufferValue {
       data,
       value: self,
-      len,
+      len: len as usize,
     })
   }
 
@@ -151,9 +151,9 @@ impl JsArrayBuffer {
       sys::napi_create_typedarray(
         self.0.env,
         typedarray_type.into(),
-        length,
+        length as sys::size_t,
         self.0.value,
-        byte_offset,
+        byte_offset as sys::size_t,
         &mut typedarray_value,
       )
     })?;
@@ -169,9 +169,9 @@ impl JsArrayBuffer {
     check_status!(unsafe {
       sys::napi_create_dataview(
         self.0.env,
-        length,
+        length as sys::size_t,
         self.0.value,
-        byte_offset,
+        byte_offset as sys::size_t,
         &mut dataview_value,
       )
     })?;
@@ -237,7 +237,7 @@ impl JsTypedArray {
     let mut len = 0u64;
     let mut data = ptr::null_mut();
     let mut arraybuffer_value = ptr::null_mut();
-    let mut byte_offset = 0u64;
+    let mut byte_offset: sys::size_t = 0;
     check_status!(unsafe {
       sys::napi_get_typedarray_info(
         self.0.env,
@@ -246,7 +246,7 @@ impl JsTypedArray {
         &mut len as *mut u64 as *mut _,
         &mut data,
         &mut arraybuffer_value,
-        &mut byte_offset as *mut u64 as *mut usize,
+        &mut byte_offset,
       )
     })?;
 

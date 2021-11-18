@@ -39,7 +39,7 @@ impl TypeName for BigInt {
 
 impl FromNapiValue for BigInt {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> crate::Result<Self> {
-    let mut word_count = 0usize;
+    let mut word_count = 0;
     check_status!(sys::napi_get_value_bigint_words(
       env,
       napi_val,
@@ -131,7 +131,7 @@ impl ToNapiValue for BigInt {
         true => 1,
         false => 0,
       },
-      len,
+      len as sys::size_t,
       val.words.as_ptr(),
       &mut raw_value,
     ))?;

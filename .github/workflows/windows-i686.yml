@@ -5,9 +5,6 @@ env:
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
 
 jobs:
   build_and_test:
@@ -72,9 +69,8 @@ jobs:
 
       - name: Build Tests
         run: |
-          yarn --cwd ./examples/napi-compat-mode build-i686
-          yarn --cwd ./examples/napi build-i686
-          yarn test
+          yarn --cwd ./examples/napi build-i686 --release
+          yarn test examples/napi/__test__/values.spec.ts
         env:
           RUST_BACKTRACE: 1
 

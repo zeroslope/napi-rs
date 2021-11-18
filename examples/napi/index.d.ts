@@ -1,3 +1,4 @@
+export const DEFAULT_COST: number
 export function getWords(): Array<string>
 export function getNums(): Array<number>
 export function sumNums(nums: Array<number>): number
@@ -15,6 +16,9 @@ interface Obj {
   v: string | number
 }
 export function either4(input: string | number | boolean | Obj): number
+export enum Kind { Dog = 0, Cat = 1, Duck = 2 }
+export enum CustomNumEnum { One = 1, Two = 2, Three = 3, Four = 4, Six = 6, Eight = 8, Nine = 9, Ten = 10 }
+export function enumToI32(e: CustomNumEnum): number
 export function throwError(): void
 export function mapOption(val?: number | undefined | null): number | undefined | null
 export function add(a: number, b: number): number
@@ -44,6 +48,28 @@ export function withAbortController(a: number, b: number, signal: AbortSignal): 
 export function callThreadsafeFunction(callback: (...args: any[]) => any): void
 export function threadsafeFunctionThrowError(cb: (...args: any[]) => any): void
 export function getBuffer(): Buffer
+export class Animal {
+  readonly kind: Kind
+  constructor(kind: Kind, name: string)
+  static withKind(kind: Kind): Animal
+  get name(): string
+  set name(name: string)
+  whoami(): string
+  static getDogKind(): Kind
+}
+export class Blake2BHasher {
+  
+  static withKey(key: Blake2bKey): Blake2BHasher
+}
+export class Blake2BKey {
+  
+}
+export class Context {
+  maybeNeed?: boolean | undefined | null
+  constructor()
+  static withData(data: string): Context
+  method(): string
+}
 export class ClassWithFactory {
   name: string
   static withName(name: string): ClassWithFactory

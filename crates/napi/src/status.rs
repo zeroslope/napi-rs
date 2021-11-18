@@ -39,8 +39,8 @@ impl Display for Status {
   }
 }
 
-impl From<i32> for Status {
-  fn from(code: i32) -> Self {
+impl From<sys::napi_status> for Status {
+  fn from(code: sys::napi_status) -> Self {
     match code {
       sys::Status::napi_ok => Status::Ok,
       sys::Status::napi_invalid_arg => Status::InvalidArg,
@@ -69,7 +69,7 @@ impl From<i32> for Status {
   }
 }
 
-impl From<Status> for i32 {
+impl From<Status> for sys::napi_status {
   fn from(code: Status) -> Self {
     match code {
       Status::Ok => sys::Status::napi_ok,

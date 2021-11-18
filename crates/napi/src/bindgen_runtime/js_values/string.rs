@@ -21,7 +21,12 @@ impl ToNapiValue for String {
     let mut ptr = ptr::null_mut();
 
     check_status!(
-      sys::napi_create_string_utf8(env, val.as_ptr() as *const _, val.len(), &mut ptr),
+      sys::napi_create_string_utf8(
+        env,
+        val.as_ptr() as *const _,
+        val.len() as sys::size_t,
+        &mut ptr
+      ),
       "Failed to convert rust `String` into napi `string`"
     )?;
 
@@ -31,7 +36,7 @@ impl ToNapiValue for String {
 
 impl FromNapiValue for String {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
-    let mut len = mem::MaybeUninit::uninit();
+    let mut len = std::mem::MaybeUninit::uninit();
 
     check_status!(
       sys::napi_get_value_string_utf8(env, napi_val, ptr::null_mut(), 0, len.as_mut_ptr()),
@@ -40,9 +45,9 @@ impl FromNapiValue for String {
 
     // end char len in C
     let len = len.assume_init() + 1;
-    let mut ret = vec![0u8; len];
+    let mut ret = vec![0u8; len as usize];
 
-    let mut written_char_count = mem::MaybeUninit::uninit();
+    let mut written_char_count = std::mem::MaybeUninit::uninit();
 
     check_status!(
       sys::napi_get_value_string_utf8(
@@ -120,7 +125,7 @@ impl FromNapiValue for Utf16String {
 
     // end char len in C
     len += 1;
-    let mut ret = vec![0; len];
+    let mut ret = vec![0; len as usize];
     let mut written_char_count = 0;
 
     check_status!(
@@ -153,7 +158,12 @@ impl ToNapiValue for Utf16String {
     let encoded = val.0.encode_utf16().collect::<Vec<_>>();
 
     check_status!(
-      sys::napi_create_string_utf16(env, encoded.as_ptr() as *const _, encoded.len(), &mut ptr),
+      sys::napi_create_string_utf16(
+        env,
+        encoded.as_ptr() as *const _,
+        encoded.len() as sys::size_t,
+        &mut ptr
+      ),
       "Failed to convert napi `string` into rust type `String`"
     )?;
 
@@ -210,7 +220,7 @@ pub mod latin1_string {
 
       // end char len in C
       len += 1;
-      let mut buf = Vec::with_capacity(len);
+      let mut buf = Vec::with_capacity(len as usize);
       let buf_ptr = buf.as_mut_ptr();
 
       let mut written_char_count = 0;
@@ -221,7 +231,7 @@ pub mod latin1_string {
         sys::napi_get_value_string_latin1(env, napi_val, buf_ptr, len, &mut written_char_count),
         "Failed to convert napi `latin1 string` into rust type `String`"
       )?;
-
+      let written_char_count = written_char_count as usize;
       let buf = Vec::from_raw_parts(buf_ptr as *mut _, written_char_count, written_char_count);
       let mut dst_slice = vec![0; buf.len() * 2];
       let written =
@@ -240,7 +250,12 @@ pub mod latin1_string {
       encoding_rs::mem::convert_utf8_to_latin1_lossy(val.0.as_bytes(), dst.as_mut_slice());
 
       check_status!(
-        sys::napi_create_string_latin1(env, dst.as_ptr() as *const _, dst.len(), &mut ptr),
+        sys::napi_create_string_latin1(
+          env,
+          dst.as_ptr() as *const _,
+          dst.len() as sys::size_t,
+          &mut ptr
+        ),
         "Failed to convert rust type `String` into napi `latin1 string`"
       )?;
 

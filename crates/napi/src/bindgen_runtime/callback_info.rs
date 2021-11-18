@@ -30,7 +30,7 @@ impl<const N: usize> CallbackInfo<N> {
     let mut args = [ptr::null_mut(); N];
     #[cfg(all(target_os = "windows", target_arch = "x86"))]
     let mut args = vec![ptr::null_mut(); N];
-    let mut argc = N;
+    let mut argc = N as sys::size_t;
 
     unsafe {
       check_status!(
@@ -47,7 +47,7 @@ impl<const N: usize> CallbackInfo<N> {
     };
 
     if let Some(required_argc) = required_argc {
-      if required_argc > argc {
+      if required_argc > argc as usize {
         return Err(Error::new(
           Status::InvalidArg,
           format!(

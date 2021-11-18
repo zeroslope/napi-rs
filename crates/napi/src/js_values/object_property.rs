@@ -17,11 +17,11 @@ pub struct Property {
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum PropertyAttributes {
-  Default = sys::napi_property_attributes::napi_default as _,
-  Writable = sys::napi_property_attributes::napi_writable as _,
-  Enumerable = sys::napi_property_attributes::napi_enumerable as _,
-  Configurable = sys::napi_property_attributes::napi_configurable as _,
-  Static = sys::napi_property_attributes::napi_static as _,
+  Default = sys::PropertyAttribute::napi_default as _,
+  Writable = sys::PropertyAttribute::napi_writable as _,
+  Enumerable = sys::PropertyAttribute::napi_enumerable as _,
+  Configurable = sys::PropertyAttribute::napi_configurable as _,
+  Static = sys::PropertyAttribute::napi_static as _,
 }
 
 impl Default for PropertyAttributes {
@@ -33,11 +33,11 @@ impl Default for PropertyAttributes {
 impl From<PropertyAttributes> for sys::napi_property_attributes {
   fn from(value: PropertyAttributes) -> Self {
     match value {
-      PropertyAttributes::Default => sys::napi_property_attributes::napi_default,
-      PropertyAttributes::Writable => sys::napi_property_attributes::napi_writable,
-      PropertyAttributes::Enumerable => sys::napi_property_attributes::napi_enumerable,
-      PropertyAttributes::Configurable => sys::napi_property_attributes::napi_configurable,
-      PropertyAttributes::Static => sys::napi_property_attributes::napi_static,
+      PropertyAttributes::Default => sys::PropertyAttribute::napi_default,
+      PropertyAttributes::Writable => sys::PropertyAttribute::napi_writable,
+      PropertyAttributes::Enumerable => sys::PropertyAttribute::napi_enumerable,
+      PropertyAttributes::Configurable => sys::PropertyAttribute::napi_configurable,
+      PropertyAttributes::Static => sys::PropertyAttribute::napi_static,
     }
   }
 }

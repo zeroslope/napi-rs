@@ -135,7 +135,7 @@ impl<'env> NapiRaw for &'env JsBigInt {
 
 impl NapiValue for JsBigInt {
   unsafe fn from_raw(env: sys::napi_env, value: sys::napi_value) -> Result<Self> {
-    let mut word_count = 0usize;
+    let mut word_count: sys::size_t = 0;
     check_status!(sys::napi_get_value_bigint_words(
       env,
       value,
@@ -149,12 +149,12 @@ impl NapiValue for JsBigInt {
         value,
         value_type: ValueType::BigInt,
       },
-      word_count,
+      word_count: word_count as usize,
     })
   }
 
   unsafe fn from_raw_unchecked(env: sys::napi_env, value: sys::napi_value) -> Self {
-    let mut word_count = 0usize;
+    let mut word_count: sys::size_t = 0;
     let status = sys::napi_get_value_bigint_words(
       env,
       value,
@@ -172,7 +172,7 @@ impl NapiValue for JsBigInt {
         value,
         value_type: ValueType::BigInt,
       },
-      word_count,
+      word_count: word_count as usize,
     }
   }
 }
@@ -199,7 +199,7 @@ impl JsBigInt {
   /// https://nodejs.org/api/n-api.html#n_api_napi_get_value_bigint_words
   pub fn get_words(&mut self) -> Result<(bool, Vec<u64>)> {
     let mut words: Vec<u64> = Vec::with_capacity(self.word_count as usize);
-    let word_count = &mut self.word_count;
+    let word_count = &mut (self.word_count as sys::size_t);
     let mut sign_bit = 0;
     check_status!(unsafe {
       sys::napi_get_value_bigint_words(

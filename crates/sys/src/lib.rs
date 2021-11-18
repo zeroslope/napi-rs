@@ -57,78 +57,100 @@ pub struct uv_loop_s {
 }
 pub type napi_deferred = *mut napi_deferred__;
 
-#[repr(C)]
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum napi_property_attributes {
-  napi_default = 0,
-  napi_writable = 1 << 0,
-  napi_enumerable = 1 << 1,
-  napi_configurable = 1 << 2,
+#[cfg(target_arch = "x86")]
+pub type size_t = c_uint;
+#[cfg(not(target_arch = "x86"))]
+pub type size_t = std::os::raw::c_ulong;
+
+#[cfg(target_arch = "x86")]
+pub type napi_property_attributes = c_int;
+#[cfg(not(target_arch = "x86"))]
+pub type napi_property_attributes = c_uint;
+
+pub mod PropertyAttribute {
+  use super::napi_property_attributes;
+  pub const napi_default: napi_property_attributes = 0;
+  pub const napi_writable: napi_property_attributes = 1 << 0;
+  pub const napi_enumerable: napi_property_attributes = 1 << 1;
+  pub const napi_configurable: napi_property_attributes = 1 << 2;
 
   // Used with napi_define_class to distinguish static properties
   // from instance properties. Ignored by napi_define_properties.
-  napi_static = 1 << 10,
+  pub const napi_static: napi_property_attributes = 1 << 10;
 }
 
-pub type napi_valuetype = i32;
+#[cfg(target_arch = "x86")]
+pub type napi_valuetype = c_int;
+#[cfg(not(target_arch = "x86"))]
+pub type napi_valuetype = c_uint;
 
 pub mod ValueType {
-  pub const napi_undefined: i32 = 0;
-  pub const napi_null: i32 = 1;
-  pub const napi_boolean: i32 = 2;
-  pub const napi_number: i32 = 3;
-  pub const napi_string: i32 = 4;
-  pub const napi_symbol: i32 = 5;
-  pub const napi_object: i32 = 6;
-  pub const napi_function: i32 = 7;
-  pub const napi_external: i32 = 8;
+  use super::napi_valuetype;
+  pub const napi_undefined: napi_valuetype = 0;
+  pub const napi_null: napi_valuetype = 1;
+  pub const napi_boolean: napi_valuetype = 2;
+  pub const napi_number: napi_valuetype = 3;
+  pub const napi_string: napi_valuetype = 4;
+  pub const napi_symbol: napi_valuetype = 5;
+  pub const napi_object: napi_valuetype = 6;
+  pub const napi_function: napi_valuetype = 7;
+  pub const napi_external: napi_valuetype = 8;
   #[cfg(feature = "napi6")]
-  pub const napi_bigint: i32 = 9;
+  pub const napi_bigint: napi_valuetype = 9;
 }
 
-pub type napi_typedarray_type = i32;
+#[cfg(target_arch = "x86")]
+pub type napi_typedarray_type = c_int;
+#[cfg(not(target_arch = "x86"))]
+pub type napi_typedarray_type = c_uint;
 
 pub mod TypedarrayType {
-  pub const napi_int8_array: i32 = 0;
-  pub const napi_uint8_array: i32 = 1;
-  pub const napi_uint8_clamped_array: i32 = 2;
-  pub const napi_int16_array: i32 = 3;
-  pub const napi_uint16_array: i32 = 4;
-  pub const napi_int32_array: i32 = 5;
-  pub const napi_uint32_array: i32 = 6;
-  pub const napi_float32_array: i32 = 7;
-  pub const napi_float64_array: i32 = 8;
+  use super::napi_typedarray_type;
+  pub const napi_int8_array: napi_typedarray_type = 0;
+  pub const napi_uint8_array: napi_typedarray_type = 1;
+  pub const napi_uint8_clamped_array: napi_typedarray_type = 2;
+  pub const napi_int16_array: napi_typedarray_type = 3;
+  pub const napi_uint16_array: napi_typedarray_type = 4;
+  pub const napi_int32_array: napi_typedarray_type = 5;
+  pub const napi_uint32_array: napi_typedarray_type = 6;
+  pub const napi_float32_array: napi_typedarray_type = 7;
+  pub const napi_float64_array: napi_typedarray_type = 8;
   #[cfg(feature = "napi6")]
-  pub const napi_bigint64_array: i32 = 9;
+  pub const napi_bigint64_array: napi_typedarray_type = 9;
   #[cfg(feature = "napi6")]
-  pub const napi_biguint64_array: i32 = 10;
+  pub const napi_biguint64_array: napi_typedarray_type = 10;
 }
 
-pub type napi_status = i32;
+#[cfg(target_arch = "x86")]
+pub type napi_status = c_int;
+#[cfg(not(target_arch = "x86"))]
+pub type napi_status = c_uint;
 
 pub mod Status {
-  pub const napi_ok: i32 = 0;
-  pub const napi_invalid_arg: i32 = 1;
-  pub const napi_object_expected: i32 = 2;
-  pub const napi_string_expected: i32 = 3;
-  pub const napi_name_expected: i32 = 4;
-  pub const napi_function_expected: i32 = 5;
-  pub const napi_number_expected: i32 = 6;
-  pub const napi_boolean_expected: i32 = 7;
-  pub const napi_array_expected: i32 = 8;
-  pub const napi_generic_failure: i32 = 9;
-  pub const napi_pending_exception: i32 = 10;
-  pub const napi_cancelled: i32 = 11;
-  pub const napi_escape_called_twice: i32 = 12;
-  pub const napi_handle_scope_mismatch: i32 = 13;
-  pub const napi_callback_scope_mismatch: i32 = 14;
-  pub const napi_queue_full: i32 = 15;
-  pub const napi_closing: i32 = 16;
-  pub const napi_bigint_expected: i32 = 17;
-  pub const napi_date_expected: i32 = 18;
-  pub const napi_arraybuffer_expected: i32 = 19;
-  pub const napi_detachable_arraybuffer_expected: i32 = 20;
-  pub const napi_would_deadlock: i32 = 21; // unused
+  use super::napi_status;
+
+  pub const napi_ok: napi_status = 0;
+  pub const napi_invalid_arg: napi_status = 1;
+  pub const napi_object_expected: napi_status = 2;
+  pub const napi_string_expected: napi_status = 3;
+  pub const napi_name_expected: napi_status = 4;
+  pub const napi_function_expected: napi_status = 5;
+  pub const napi_number_expected: napi_status = 6;
+  pub const napi_boolean_expected: napi_status = 7;
+  pub const napi_array_expected: napi_status = 8;
+  pub const napi_generic_failure: napi_status = 9;
+  pub const napi_pending_exception: napi_status = 10;
+  pub const napi_cancelled: napi_status = 11;
+  pub const napi_escape_called_twice: napi_status = 12;
+  pub const napi_handle_scope_mismatch: napi_status = 13;
+  pub const napi_callback_scope_mismatch: napi_status = 14;
+  pub const napi_queue_full: napi_status = 15;
+  pub const napi_closing: napi_status = 16;
+  pub const napi_bigint_expected: napi_status = 17;
+  pub const napi_date_expected: napi_status = 18;
+  pub const napi_arraybuffer_expected: napi_status = 19;
+  pub const napi_detachable_arraybuffer_expected: napi_status = 20;
+  pub const napi_would_deadlock: napi_status = 21; // unused
 }
 
 pub type napi_callback =
@@ -158,29 +180,42 @@ pub struct napi_extended_error_info {
   pub error_code: napi_status,
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub enum napi_key_collection_mode {
-  napi_key_include_prototypes,
-  napi_key_own_only,
+#[cfg(target_arch = "x86")]
+pub type napi_key_collection_mode = c_int;
+#[cfg(not(target_arch = "x86"))]
+pub type napi_key_collection_mode = c_uint;
+
+pub mod KeyCollectionMode {
+  use super::napi_key_collection_mode;
+
+  pub const napi_key_include_prototypes: napi_key_collection_mode = 0;
+  pub const napi_key_own_only: napi_key_collection_mode = 1;
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub enum napi_key_filter {
-  napi_key_all_properties = 0,
-  napi_key_writable = 1,
-  napi_key_enumerable = 1 << 1,
-  napi_key_configurable = 1 << 2,
-  napi_key_skip_strings = 1 << 3,
-  napi_key_skip_symbols = 1 << 4,
+#[cfg(target_arch = "x86")]
+pub type napi_key_filter = c_int;
+#[cfg(not(target_arch = "x86"))]
+pub type napi_key_filter = c_uint;
+
+pub mod KeyFilter {
+  use super::napi_key_filter;
+  pub const napi_key_all_properties: napi_key_filter = 0;
+  pub const napi_key_writable: napi_key_filter = 1;
+  pub const napi_key_enumerable: napi_key_filter = 1 << 1;
+  pub const napi_key_configurable: napi_key_filter = 1 << 2;
+  pub const napi_key_skip_strings: napi_key_filter = 1 << 3;
+  pub const napi_key_skip_symbols: napi_key_filter = 1 << 4;
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub enum napi_key_conversion {
-  napi_key_keep_numbers,
-  napi_key_numbers_to_strings,
+#[cfg(target_arch = "x86")]
+pub type napi_key_conversion = c_int;
+#[cfg(not(target_arch = "x86"))]
+pub type napi_key_conversion = c_uint;
+
+pub mod KeyConversion {
+  use super::napi_key_conversion;
+  pub const napi_key_keep_numbers: napi_key_conversion = 0;
+  pub const napi_key_numbers_to_strings: napi_key_conversion = 1;
 }
 
 #[cfg(feature = "napi8")]
@@ -209,7 +244,7 @@ extern "C" {
   pub fn napi_create_array(env: napi_env, result: *mut napi_value) -> napi_status;
   pub fn napi_create_array_with_length(
     env: napi_env,
-    length: usize,
+    length: size_t,
     result: *mut napi_value,
   ) -> napi_status;
   pub fn napi_create_double(env: napi_env, value: f64, result: *mut napi_value) -> napi_status;
@@ -219,19 +254,19 @@ extern "C" {
   pub fn napi_create_string_latin1(
     env: napi_env,
     str_: *const c_char,
-    length: usize,
+    length: size_t,
     result: *mut napi_value,
   ) -> napi_status;
   pub fn napi_create_string_utf8(
     env: napi_env,
     str_: *const c_char,
-    length: usize,
+    length: size_t,
     result: *mut napi_value,
   ) -> napi_status;
   pub fn napi_create_string_utf16(
     env: napi_env,
     str_: *const u16,
-    length: usize,
+    length: size_t,
     result: *mut napi_value,
   ) -> napi_status;
   pub fn napi_create_symbol(
@@ -242,7 +277,7 @@ extern "C" {
   pub fn napi_create_function(
     env: napi_env,
     utf8name: *const c_char,
-    length: usize,
+    length: size_t,
     cb: napi_callback,
     data: *mut c_void,
     result: *mut napi_value,
@@ -275,22 +310,22 @@ extern "C" {
     env: napi_env,
     value: napi_value,
     buf: *mut c_char,
-    bufsize: usize,
-    result: *mut usize,
+    bufsize: size_t,
+    result: *mut size_t,
   ) -> napi_status;
   pub fn napi_get_value_string_utf8(
     env: napi_env,
     value: napi_value,
     buf: *mut c_char,
-    bufsize: usize,
-    result: *mut usize,
+    bufsize: size_t,
+    result: *mut size_t,
   ) -> napi_status;
   pub fn napi_get_value_string_utf16(
     env: napi_env,
     value: napi_value,
     buf: *mut u16,
-    bufsize: usize,
-    result: *mut usize,
+    bufsize: size_t,
+    result: *mut size_t,
   ) -> napi_status;
   pub fn napi_coerce_to_bool(
     env: napi_env,
@@ -397,7 +432,7 @@ extern "C" {
   pub fn napi_define_properties(
     env: napi_env,
     object: napi_value,
-    property_count: usize,
+    property_count: size_t,
     properties: *const napi_property_descriptor,
   ) -> napi_status;
   pub fn napi_is_array(env: napi_env, value: napi_value, result: *mut bool) -> napi_status;
@@ -412,14 +447,14 @@ extern "C" {
     env: napi_env,
     recv: napi_value,
     func: napi_value,
-    argc: usize,
+    argc: size_t,
     argv: *const napi_value,
     result: *mut napi_value,
   ) -> napi_status;
   pub fn napi_new_instance(
     env: napi_env,
     constructor: napi_value,
-    argc: usize,
+    argc: size_t,
     argv: *const napi_value,
     result: *mut napi_value,
   ) -> napi_status;
@@ -432,7 +467,7 @@ extern "C" {
   pub fn napi_get_cb_info(
     env: napi_env,
     cbinfo: napi_callback_info,
-    argc: *mut usize,
+    argc: *mut size_t,
     argv: *mut napi_value,
     this_arg: *mut napi_value,
     data: *mut *mut c_void,
@@ -445,10 +480,10 @@ extern "C" {
   pub fn napi_define_class(
     env: napi_env,
     utf8name: *const c_char,
-    length: usize,
+    length: size_t,
     constructor: napi_callback,
     data: *mut c_void,
-    property_count: usize,
+    property_count: size_t,
     properties: *const napi_property_descriptor,
     result: *mut napi_value,
   ) -> napi_status;
@@ -527,14 +562,14 @@ extern "C" {
   pub fn napi_is_arraybuffer(env: napi_env, value: napi_value, result: *mut bool) -> napi_status;
   pub fn napi_create_arraybuffer(
     env: napi_env,
-    byte_length: usize,
+    byte_length: size_t,
     data: *mut *mut c_void,
     result: *mut napi_value,
   ) -> napi_status;
   pub fn napi_create_external_arraybuffer(
     env: napi_env,
     external_data: *mut c_void,
-    byte_length: usize,
+    byte_length: size_t,
     finalize_cb: napi_finalize,
     finalize_hint: *mut c_void,
     result: *mut napi_value,
@@ -543,41 +578,41 @@ extern "C" {
     env: napi_env,
     arraybuffer: napi_value,
     data: *mut *mut c_void,
-    byte_length: *mut usize,
+    byte_length: *mut size_t,
   ) -> napi_status;
   pub fn napi_is_typedarray(env: napi_env, value: napi_value, result: *mut bool) -> napi_status;
   pub fn napi_create_typedarray(
     env: napi_env,
     type_: napi_typedarray_type,
-    length: usize,
+    length: size_t,
     arraybuffer: napi_value,
-    byte_offset: usize,
+    byte_offset: size_t,
     result: *mut napi_value,
   ) -> napi_status;
   pub fn napi_get_typedarray_info(
     env: napi_env,
     typedarray: napi_value,
     type_: *mut napi_typedarray_type,
-    length: *mut usize,
+    length: *mut size_t,
     data: *mut *mut c_void,
     arraybuffer: *mut napi_value,
-    byte_offset: *mut usize,
+    byte_offset: *mut size_t,
   ) -> napi_status;
   pub fn napi_create_dataview(
     env: napi_env,
-    length: usize,
+    length: size_t,
     arraybuffer: napi_value,
-    byte_offset: usize,
+    byte_offset: size_t,
     result: *mut napi_value,
   ) -> napi_status;
   pub fn napi_is_dataview(env: napi_env, value: napi_value, result: *mut bool) -> napi_status;
   pub fn napi_get_dataview_info(
     env: napi_env,
     dataview: napi_value,
-    bytelength: *mut usize,
+    bytelength: *mut size_t,
     data: *mut *mut c_void,
     arraybuffer: *mut napi_value,
-    byte_offset: *mut usize,
+    byte_offset: *mut size_t,
   ) -> napi_status;
   pub fn napi_get_version(env: napi_env, result: *mut u32) -> napi_status;
   pub fn napi_create_promise(
@@ -606,9 +641,9 @@ extern "C" {
   pub fn napi_module_register(mod_: *mut napi_module);
   pub fn napi_fatal_error(
     location: *const c_char,
-    location_len: usize,
+    location_len: size_t,
     message: *const c_char,
-    message_len: usize,
+    message_len: size_t,
   );
   pub fn napi_async_init(
     env: napi_env,
@@ -622,19 +657,19 @@ extern "C" {
     async_context: napi_async_context,
     recv: napi_value,
     func: napi_value,
-    argc: usize,
+    argc: size_t,
     argv: *const napi_value,
     result: *mut napi_value,
   ) -> napi_status;
   pub fn napi_create_buffer(
     env: napi_env,
-    length: usize,
+    length: size_t,
     data: *mut *mut c_void,
     result: *mut napi_value,
   ) -> napi_status;
   pub fn napi_create_external_buffer(
     env: napi_env,
-    length: usize,
+    length: size_t,
     data: *mut c_void,
     finalize_cb: napi_finalize,
     finalize_hint: *mut c_void,
@@ -642,7 +677,7 @@ extern "C" {
   ) -> napi_status;
   pub fn napi_create_buffer_copy(
     env: napi_env,
-    length: usize,
+    length: size_t,
     data: *const c_void,
     result_data: *mut *mut c_void,
     result: *mut napi_value,
@@ -652,7 +687,7 @@ extern "C" {
     env: napi_env,
     value: napi_value,
     data: *mut *mut c_void,
-    length: *mut usize,
+    length: *mut size_t,
   ) -> napi_status;
   pub fn napi_create_async_work(
     env: napi_env,
@@ -706,8 +741,8 @@ extern "C" {
     func: napi_value,
     async_resource: napi_value,
     async_resource_name: napi_value,
-    max_queue_size: usize,
-    initial_thread_count: usize,
+    max_queue_size: size_t,
+    initial_thread_count: size_t,
     thread_finalize_data: *mut c_void,
     thread_finalize_cb: napi_finalize,
     context: *mut c_void,
@@ -766,7 +801,7 @@ extern "C" {
   pub fn napi_create_bigint_words(
     env: napi_env,
     sign_bit: c_int,
-    word_count: usize,
+    word_count: size_t,
     words: *const u64,
     result: *mut napi_value,
   ) -> napi_status;
@@ -786,7 +821,7 @@ extern "C" {
     env: napi_env,
     value: napi_value,
     sign_bit: *mut c_int,
-    word_count: *mut usize,
+    word_count: *mut size_t,
     words: *mut u64,
   ) -> napi_status;
   pub fn napi_get_all_property_names(
