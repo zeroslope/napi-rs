@@ -1,5 +1,7 @@
 [target.i686-pc-windows-msvc]
 rustflags = [
   "-C",
-  "link-args=/LTCG:OFF",
+  "force-frame-pointers",
+  "-C",
+  "linker-flavor=lld-link",
 ]
