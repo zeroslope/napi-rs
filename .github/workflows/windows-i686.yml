@@ -38,6 +38,6 @@ jobs:
       - name: Build Tests
         run: |
           yarn --cwd ./examples/napi build-i686 --release
-          yarn test examples/napi/__test__/values.spec.ts
+          yarn test -s examples/napi/__test__/values.spec.ts
         env:
           RUST_BACKTRACE: 1

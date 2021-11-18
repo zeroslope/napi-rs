@@ -28,6 +28,7 @@ impl NapiConst {
     quote! {
       #[inline(never)]
       unsafe fn #register_cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
+        println!("registering {}, env: {:p}", #name_str, env);
         napi::bindgen_prelude::ToNapiValue::to_napi_value(env, #name_ident).expect(format!("Create JsValue from const failed {}", #js_name_lit).as_str())
       }
       #[allow(non_snake_case)]
