@@ -40,32 +40,7 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-
-      - name: Install i686 toolchain
-        run: rustup target add i686-pc-windows-msvc
-
-      - name: Generate Cargo.lock
-        uses: actions-rs/cargo@v1
-        with:
-          command: generate-lockfile
-
-      - name: Cache cargo registry
-        uses: actions/cache@v2
-        with:
-          path: ~/.cargo/registry
-          key: stable-windows-i686-node@lts-cargo-registry-trimmed-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo index
-        uses: actions/cache@v2
-        with:
-          path: ~/.cargo/git
-          key: stable-windows-i686-node@lts-cargo-index-trimmed-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Check build
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all --bins --examples --tests --target i686-pc-windows-msvc -vvv
+          target: i686-pc-windows-msvc
 
       - name: Build Tests
         run: |
@@ -73,8 +48,3 @@ jobs:
           yarn test examples/napi/__test__/values.spec.ts
         env:
           RUST_BACKTRACE: 1
-
-      - name: Clear the cargo caches
-        run: |
-          cargo install cargo-cache --no-default-features --features ci-autoclean
-          cargo-cache
