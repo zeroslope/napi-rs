@@ -1,7 +1,5 @@
 [target.i686-pc-windows-msvc]
 rustflags = [
   "-C",
-  "link-args=/GUARD:CF",
-  "-C",
-  "link-args=/STACK:4194304,4194304"
+  "target-cpu=i686",
 ]
