@@ -103,11 +103,11 @@ impl NapiEnum {
 
     let mut properties = vec![];
 
-    for (index, variant) in self.variants.iter().enumerate() {
-      properties.push(format!("\"{}\": {}", variant.name, index));
+    for variant in self.variants.iter() {
+      properties.push(format!(r#""{}": {}"#, variant.name, variant.val));
     }
 
-    let json_string = "JSON.parse({".to_owned() + properties.join(",").as_str() + "})\0";
+    let json_string = "JSON.parse('{".to_owned() + properties.join(",").as_str() + "}')\0";
 
     quote! {
       #[allow(non_snake_case)]
@@ -122,7 +122,8 @@ impl NapiEnum {
             #json_string.as_bytes()
           );
           let mut output_string = std::mem::MaybeUninit::uninit();
-          let json_string = napi::sys::napi_create_string_utf8(env, json_lit_c_str.as_ptr(), len as _, output_string.as_mut_ptr());
+          napi::sys::napi_create_string_utf8(env, json_lit_c_str.as_ptr(), len as _, output_string.as_mut_ptr());
+          println!("{:?}", #json_string);
           napi::sys::napi_run_script(env, output_string.assume_init(), obj_ptr.as_mut_ptr());
 
           obj_ptr.assume_init()

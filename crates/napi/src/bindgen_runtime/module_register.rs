@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, ptr};
+use std::{cell::RefCell, collections::HashMap, ffi::CStr, ptr};
 
 use crate::{check_status, check_status_or_throw, sys, JsError, Property, Result};
 
@@ -55,10 +55,11 @@ pub unsafe extern "C" fn napi_register_module_v1(
 ) -> sys::napi_value {
   MODULE_REGISTER_CALLBACK.with(|to_register_exports| {
     for (name, callback) in to_register_exports.borrow().iter() {
+      let name_c_str = CStr::from_bytes_with_nul_unchecked(name.as_bytes());
       unsafe {
         check_status_or_throw!(
           env,
-          sys::napi_set_named_property(env, exports, name.as_ptr() as *const _, callback(env)),
+          sys::napi_set_named_property(env, exports, name_c_str.as_ptr(), callback(env)),
           "Set exports failed [{}]",
           name
         );
