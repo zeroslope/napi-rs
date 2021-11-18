@@ -245,6 +245,7 @@ macro_rules! error {
   };
 }
 
+#[cfg(not(all(target_os = "windows", target_arch = "x86")))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! check_status {
@@ -262,5 +263,22 @@ macro_rules! check_status {
       $crate::sys::Status::napi_ok => Ok(()),
       _ => Err($crate::Error::new($crate::Status::from(c), format!($($msg)*))),
     }
+  }};
+}
+
+#[cfg(all(target_os = "windows", target_arch = "x86"))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! check_status {
+  ($code:expr) => {{
+    let c = $code;
+    debug_assert!(c == $crate::sys::Status::napi_ok, "status: {:?}", c);
+    Ok(()) as $crate::Result<()>
+  }};
+
+  ($code:expr, $($msg:tt)*) => {{
+    let c = $code;
+    debug_assert!(c == $crate::sys::Status::napi_ok, $($msg)*);
+    Ok(()) as $crate::Result<()>
   }};
 }

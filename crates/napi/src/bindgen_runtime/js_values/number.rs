@@ -22,17 +22,25 @@ macro_rules! impl_number_conversions {
       }
 
       impl $crate::bindgen_prelude::ToNapiValue for $t {
-        #[inline(always)]
+        #[cfg(all(target_os = "windows", target_arch = "x86"))]
         unsafe fn to_napi_value(env: $crate::sys::napi_env, val: $t) -> Result<$crate::sys::napi_value> {
-          let mut ptr = std::ptr::null_mut();
+          let mut ptr = std::mem::MaybeUninit::uninit();
+          println!("{:p} {}", env, val);
+          sys::$create(env, val, ptr.as_mut_ptr() as *mut _);
 
+          Ok(ptr.assume_init())
+        }
+
+        #[cfg(not(all(target_os = "windows", target_arch = "x86")))]
+        unsafe fn to_napi_value(env: $crate::sys::napi_env, val: $t) -> Result<$crate::sys::napi_value> {
+          let mut ptr = std::mem::MaybeUninit::uninit();
           check_status!(
-            sys::$create(env, val, &mut ptr),
+            sys::$create(env, val, ptr.as_mut_ptr()),
 						"Failed to convert rust type `{}` into napi value",
 						$name,
           )?;
 
-          Ok(ptr)
+          Ok(ptr.assume_init())
         }
       }
 

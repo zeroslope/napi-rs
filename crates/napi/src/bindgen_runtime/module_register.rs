@@ -1,8 +1,8 @@
-use std::{cell::RefCell, collections::HashMap, ffi::CString, ptr};
+use std::{cell::RefCell, collections::HashMap, ptr};
 
 use crate::{check_status, check_status_or_throw, sys, JsError, Property, Result};
 
-pub type ExportRegisterCallback = unsafe fn(sys::napi_env) -> Result<sys::napi_value>;
+pub type ExportRegisterCallback = unsafe fn(sys::napi_env) -> sys::napi_value;
 pub type ModuleExportsCallback =
   unsafe fn(env: sys::napi_env, exports: sys::napi_value) -> Result<()>;
 
@@ -49,65 +49,57 @@ pub fn register_class(rust_name: &'static str, js_name: &'static str, props: Vec
 }
 
 #[no_mangle]
-unsafe extern "C" fn napi_register_module_v1(
+pub unsafe extern "C" fn napi_register_module_v1(
   env: sys::napi_env,
   exports: sys::napi_value,
 ) -> sys::napi_value {
   MODULE_REGISTER_CALLBACK.with(|to_register_exports| {
-    to_register_exports
-      .take()
-      .into_iter()
-      .for_each(|(name, callback)| {
-        let js_name = CString::new(name).unwrap();
-        unsafe {
-          if let Err(e) = callback(env).and_then(|v| {
-            check_status!(
-              sys::napi_set_named_property(env, exports, js_name.as_ptr(), v),
-              "Failed to register export `{}`",
-              name,
-            )
-          }) {
-            JsError::from(e).throw_into(env)
-          }
-        }
-      })
+    for (name, callback) in to_register_exports.borrow().iter() {
+      unsafe {
+        check_status_or_throw!(
+          env,
+          sys::napi_set_named_property(env, exports, name.as_ptr() as *const _, callback(env)),
+          "Set exports failed [{}]",
+          name
+        );
+      }
+    }
   });
 
   MODULE_CLASS_PROPERTIES.with(|to_register_classes| {
-    for (rust_name, (js_name, props)) in to_register_classes.take().into_iter() {
+    for (rust_name, (js_name, props)) in to_register_classes.borrow().iter() {
       unsafe {
-        let (ctor, props): (Vec<_>, Vec<_>) = props.into_iter().partition(|prop| prop.is_ctor);
+        let (ctor, props): (Vec<_>, Vec<_>) = props.iter().partition(|prop| prop.is_ctor);
         // one or more or zero?
         // zero is for `#[napi(task)]`
         if ctor.is_empty() && props.is_empty() {
           continue;
         }
-        let ctor = ctor.get(0).map(|c| c.raw().method.unwrap()).unwrap_or(noop);
+        let ctor = ctor.get(0).and_then(|c| c.raw().method).unwrap_or(noop);
         let raw_props: Vec<_> = props.iter().map(|prop| prop.raw()).collect();
 
-        let js_class_name = CString::new(js_name).unwrap();
-        let mut class_ptr = ptr::null_mut();
+        let mut class_ptr = std::mem::MaybeUninit::uninit();
 
         check_status_or_throw!(
           env,
           sys::napi_define_class(
             env,
-            js_class_name.as_ptr(),
-            js_name.len(),
-            Some(ctor),
+            js_name.as_ptr() as *const _,
+            js_name.len() - 1,
+            std::mem::transmute(ctor),
             ptr::null_mut(),
             raw_props.len(),
             raw_props.as_ptr(),
-            &mut class_ptr,
+            class_ptr.as_mut_ptr(),
           ),
           "Failed to register class `{}` generate by struct `{}`",
           &js_name,
           &rust_name
         );
-
-        let mut ctor_ref = ptr::null_mut();
-        sys::napi_create_reference(env, class_ptr, 1, &mut ctor_ref);
-
+        let class_ptr = class_ptr.assume_init();
+        let mut ctor_ref = std::mem::MaybeUninit::uninit();
+        sys::napi_create_reference(env, class_ptr, 1, ctor_ref.as_mut_ptr());
+        let ctor_ref = ctor_ref.assume_init();
         REGISTERED_CLASSES.with(|registered_classes| {
           let mut registered_class = registered_classes.borrow_mut();
           registered_class.insert(js_name, ctor_ref);
@@ -115,7 +107,7 @@ unsafe extern "C" fn napi_register_module_v1(
 
         check_status_or_throw!(
           env,
-          sys::napi_set_named_property(env, exports, js_class_name.as_ptr(), class_ptr),
+          sys::napi_set_named_property(env, exports, js_name.as_ptr() as *const _, class_ptr),
           "Failed to register class `{}` generate by struct `{}`",
           &js_name,
           &rust_name

@@ -1,4 +1,4 @@
-use proc_macro2::{Literal, TokenStream};
+use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::ToTokens;
 
 use crate::{codegen::get_register_ident, BindgenResult, NapiEnum, TryToTokens};
@@ -46,8 +46,8 @@ impl NapiEnum {
 
       impl napi::bindgen_prelude::ValidateNapiValue for #name {
         unsafe fn validate(
-          env: napi::bindgen_prelude::sys::napi_env,
-          napi_val: napi::bindgen_prelude::sys::napi_value
+          env: napi::sys::napi_env,
+          napi_val: napi::sys::napi_value
         ) -> napi::bindgen_prelude::Result<()> {
           napi::bindgen_prelude::assert_type_of!(env, napi_val, napi::bindgen_prelude::ValueType::Number)
         }
@@ -55,8 +55,8 @@ impl NapiEnum {
 
       impl napi::bindgen_prelude::FromNapiValue for #name {
         unsafe fn from_napi_value(
-          env: napi::bindgen_prelude::sys::napi_env,
-          napi_val: napi::bindgen_prelude::sys::napi_value
+          env: napi::sys::napi_env,
+          napi_val: napi::sys::napi_value
         ) -> napi::bindgen_prelude::Result<Self> {
           let val = i32::from_napi_value(env, napi_val).map_err(|e| {
             napi::bindgen_prelude::error!(
@@ -83,9 +83,9 @@ impl NapiEnum {
 
       impl napi::bindgen_prelude::ToNapiValue for #name {
         unsafe fn to_napi_value(
-          env: napi::bindgen_prelude::sys::napi_env,
+          env: napi::sys::napi_env,
           val: Self
-        ) -> napi::bindgen_prelude::Result<napi::bindgen_prelude::sys::napi_value> {
+        ) -> napi::bindgen_prelude::Result<napi::sys::napi_value> {
           let val = match val {
             #(#to_napi_branches,)*
           };
@@ -98,24 +98,23 @@ impl NapiEnum {
 
   fn gen_module_register(&self) -> TokenStream {
     let name_str = self.name.to_string();
-    let js_name_lit = Literal::string(&self.js_name);
+    let js_name_lit = Literal::string(format!("{}\0", self.js_name).as_str());
     let register_name = get_register_ident(&name_str);
 
     let mut define_properties = vec![];
 
-    for variant in self.variants.iter() {
-      let name_lit = Literal::string(&variant.name.to_string());
+    for (index, variant) in self.variants.iter().enumerate() {
+      let name_lit = Literal::string(format!("{}\0", &variant.name.to_string()).as_str());
       let val_lit = Literal::i32_unsuffixed(variant.val);
+      let val_ident = Ident::new(format!("val_{}", index).as_str(), Span::call_site());
+      let enum_value_ident =
+        Ident::new(format!("enum_value_{}", index).as_str(), Span::call_site());
 
       define_properties.push(quote! {
-        {
-          let name = CString::new(#name_lit)?;
-          napi::bindgen_prelude::check_status!(
-            napi::bindgen_prelude::sys::napi_set_named_property(env, obj_ptr, name.as_ptr(), i32::to_napi_value(env, #val_lit)?),
-            "Failed to defined enum `{}`",
-            #js_name_lit
-          )?;
-        };
+        let mut #val_ident = std::mem::MaybeUninit::uninit();
+        napi::sys::napi_create_int32(env, #val_lit as i32, #val_ident.as_mut_ptr());
+        let #enum_value_ident = #val_ident.assume_init();
+        napi::sys::napi_set_named_property(env, obj_ptr, #name_lit.as_ptr() as *const _, #enum_value_ident);
       })
     }
 
@@ -124,20 +123,15 @@ impl NapiEnum {
       #[allow(clippy::all)]
       #[napi::bindgen_prelude::ctor]
       fn #register_name() {
-        use std::ffi::CString;
-        use std::ptr;
+        unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
+          let mut obj_ptr = std::mem::MaybeUninit::uninit();
 
-        unsafe fn cb(env: napi::bindgen_prelude::sys::napi_env) -> napi::bindgen_prelude::Result<napi::bindgen_prelude::sys::napi_value> {
-          let mut obj_ptr = ptr::null_mut();
-
-          napi::bindgen_prelude::check_status!(
-            napi::bindgen_prelude::sys::napi_create_object(env, &mut obj_ptr),
-            "Failed to create napi object"
-          )?;
-
+          napi::sys::napi_create_object(env, obj_ptr.as_mut_ptr());
+          let obj_ptr = obj_ptr.assume_init();
           #(#define_properties)*
 
-          Ok(obj_ptr)
+          obj_ptr
+
         }
 
         napi::bindgen_prelude::register_module_export(#js_name_lit, cb);

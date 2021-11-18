@@ -1,6 +1,5 @@
 use crate::{bindgen_prelude::*, check_status, sys, Error, Result, Status};
 
-use std::ffi::CStr;
 use std::fmt::Display;
 #[cfg(feature = "latin1")]
 use std::mem;
@@ -32,32 +31,32 @@ impl ToNapiValue for String {
 
 impl FromNapiValue for String {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
-    let mut len = 0;
+    let mut len = mem::MaybeUninit::uninit();
 
     check_status!(
-      sys::napi_get_value_string_utf8(env, napi_val, ptr::null_mut(), 0, &mut len),
+      sys::napi_get_value_string_utf8(env, napi_val, ptr::null_mut(), 0, len.as_mut_ptr()),
       "Failed to convert napi `string` into rust type `String`",
     )?;
 
     // end char len in C
-    len += 1;
-    let mut ret = Vec::with_capacity(len);
-    let buf_ptr = ret.as_mut_ptr();
+    let len = len.assume_init() + 1;
+    let mut ret = vec![0u8; len];
 
-    let mut written_char_count = 0;
+    let mut written_char_count = mem::MaybeUninit::uninit();
 
     check_status!(
-      sys::napi_get_value_string_utf8(env, napi_val, buf_ptr, len, &mut written_char_count),
+      sys::napi_get_value_string_utf8(
+        env,
+        napi_val,
+        ret.as_mut_ptr() as *mut i8,
+        len,
+        written_char_count.as_mut_ptr()
+      ),
       "Failed to convert napi `string` into rust type `String`"
     )?;
 
-    match CStr::from_ptr(buf_ptr).to_str() {
-      Err(e) => Err(Error::new(
-        Status::InvalidArg,
-        format!("Failed to read utf8 string, {}", e),
-      )),
-      Ok(s) => Ok(s.to_owned()),
-    }
+    let _ = written_char_count.assume_init();
+    Ok(String::from_utf8_unchecked(ret))
   }
 }
 

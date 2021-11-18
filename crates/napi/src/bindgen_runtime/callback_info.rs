@@ -13,7 +13,10 @@ pub static ___CALL_FROM_FACTORY: AtomicBool = AtomicBool::new(false);
 pub struct CallbackInfo<const N: usize> {
   env: sys::napi_env,
   this: sys::napi_value,
+  #[cfg(not(all(target_os = "windows", target_arch = "x86")))]
   pub args: [sys::napi_value; N],
+  #[cfg(all(target_os = "windows", target_arch = "x86"))]
+  pub args: Vec<sys::napi_value>,
 }
 
 impl<const N: usize> CallbackInfo<N> {
@@ -23,7 +26,10 @@ impl<const N: usize> CallbackInfo<N> {
     required_argc: Option<usize>,
   ) -> Result<Self> {
     let mut this = ptr::null_mut();
+    #[cfg(not(all(target_os = "windows", target_arch = "x86")))]
     let mut args = [ptr::null_mut(); N];
+    #[cfg(all(target_os = "windows", target_arch = "x86"))]
+    let mut args = vec![ptr::null_mut(); N];
     let mut argc = N;
 
     unsafe {
