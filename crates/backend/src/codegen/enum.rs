@@ -110,26 +110,24 @@ impl NapiEnum {
     let json_string = "JSON.parse('{".to_owned() + properties.join(",").as_str() + "}')\0";
 
     quote! {
+      #[inline(never)]
+      unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
+        let mut obj_ptr = std::mem::MaybeUninit::uninit();
+        let len = #json_string.len() - 1;
+        let json_lit_c_str = std::ffi::CStr::from_bytes_with_nul_unchecked(
+          #json_string.as_bytes()
+        );
+        let mut output_string = std::mem::MaybeUninit::uninit();
+        napi::sys::napi_create_string_utf8(env, json_lit_c_str.as_ptr(), len as _, output_string.as_mut_ptr());
+        napi::sys::napi_run_script(env, output_string.assume_init(), obj_ptr.as_mut_ptr());
+
+        obj_ptr.assume_init()
+
+      }
       #[allow(non_snake_case)]
       #[allow(clippy::all)]
       #[napi::bindgen_prelude::ctor]
       fn #register_name() {
-        #[inline(never)]
-        unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
-          let mut obj_ptr = std::mem::MaybeUninit::uninit();
-          let len = #json_string.len() - 1;
-          let json_lit_c_str = std::ffi::CStr::from_bytes_with_nul_unchecked(
-            #json_string.as_bytes()
-          );
-          let mut output_string = std::mem::MaybeUninit::uninit();
-          napi::sys::napi_create_string_utf8(env, json_lit_c_str.as_ptr(), len as _, output_string.as_mut_ptr());
-          println!("{:?}", #json_string);
-          napi::sys::napi_run_script(env, output_string.assume_init(), obj_ptr.as_mut_ptr());
-
-          obj_ptr.assume_init()
-
-        }
-
         napi::bindgen_prelude::register_module_export(#js_name_lit, cb);
       }
     }

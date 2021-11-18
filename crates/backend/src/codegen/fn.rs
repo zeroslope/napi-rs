@@ -296,30 +296,30 @@ impl NapiFn {
       let intermediate_ident = get_intermediate_ident(&name_str);
 
       quote! {
+        #[inline(never)]
+        unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
+          let mut fn_ptr = std::mem::MaybeUninit::<napi::sys::napi_value>::uninit();
+          let js_name_c_string = std::ffi::CStr::from_bytes_with_nul_unchecked(#js_name.as_bytes());
+          napi::bindgen_prelude::check_status_or_throw!(
+            env,
+            napi::sys::napi_create_function(
+              env,
+              js_name_c_string.as_ptr(),
+              #js_name_len as napi::sys::size_t,
+              Some(#intermediate_ident),
+              std::ptr::null_mut(),
+              fn_ptr.as_mut_ptr(),
+            ),
+            "Failed to register function `{}`",
+            #name_str,
+          );
+
+          fn_ptr.assume_init()
+        }
         #[allow(clippy::all)]
         #[allow(non_snake_case)]
         #[napi::bindgen_prelude::ctor]
         fn #module_register_name() {
-          unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
-            let mut fn_ptr = std::mem::MaybeUninit::<napi::sys::napi_value>::uninit();
-            let js_name_c_string = std::ffi::CStr::from_bytes_with_nul_unchecked(#js_name.as_bytes());
-            napi::bindgen_prelude::check_status_or_throw!(
-              env,
-              napi::sys::napi_create_function(
-                env,
-                js_name_c_string.as_ptr(),
-                #js_name_len as napi::sys::size_t,
-                Some(#intermediate_ident),
-                std::ptr::null_mut(),
-                fn_ptr.as_mut_ptr(),
-              ),
-              "Failed to register function `{}`",
-              #name_str,
-            );
-
-            fn_ptr.assume_init()
-          }
-
           napi::bindgen_prelude::register_module_export(#js_name, cb);
         }
       }

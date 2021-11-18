@@ -22,17 +22,14 @@ impl NapiConst {
     let js_name_lit = Literal::string(format!("{}\0", self.js_name).as_str());
     let register_name = get_register_ident(&name_str);
     quote! {
+      #[inline(never)]
+      unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
+        napi::bindgen_prelude::ToNapiValue::to_napi_value(env, #name_ident).expect(format!("Create JsValue from const failed {}", #js_name_lit).as_str())
+      }
       #[allow(non_snake_case)]
       #[allow(clippy::all)]
       #[napi::bindgen_prelude::ctor]
       fn #register_name() {
-        use std::ffi::CString;
-        use std::ptr;
-
-        unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
-          napi::bindgen_prelude::ToNapiValue::to_napi_value(env, #name_ident).expect(format!("Create JsValue from const failed {}", #js_name_lit).as_str())
-        }
-
         napi::bindgen_prelude::register_module_export(#js_name_lit, cb);
       }
     }
