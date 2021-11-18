@@ -1,2 +1,7 @@
 [target.i686-pc-windows-msvc]
-linker = "lld-link.exe"
+rustflags = [
+  "-C",
+  "link-args=/GUARD:CF",
+  "-C",
+  "link-args=/STACK:4194304,4194304"
+]
