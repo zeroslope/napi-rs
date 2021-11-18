@@ -1,4 +1,4 @@
-use proc_macro2::{Literal, TokenStream};
+use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::ToTokens;
 
 use crate::{codegen::get_register_ident, BindgenResult, NapiEnum, TryToTokens};
@@ -100,6 +100,10 @@ impl NapiEnum {
     let name_str = self.name.to_string();
     let js_name_lit = Literal::string(format!("{}\0", self.js_name).as_str());
     let register_name = get_register_ident(&name_str);
+    let cb_ident = Ident::new(
+      format!("__napi__enum__{}_register_cb", name_str).as_str(),
+      Span::call_site(),
+    );
 
     let mut properties = vec![];
 
@@ -111,7 +115,7 @@ impl NapiEnum {
 
     quote! {
       #[inline(never)]
-      unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
+      unsafe fn #cb_ident(env: napi::sys::napi_env) -> napi::sys::napi_value {
         let mut obj_ptr = std::mem::MaybeUninit::uninit();
         let len = #json_string.len() - 1;
         let json_lit_c_str = std::ffi::CStr::from_bytes_with_nul_unchecked(
@@ -122,13 +126,12 @@ impl NapiEnum {
         napi::sys::napi_run_script(env, output_string.assume_init(), obj_ptr.as_mut_ptr());
 
         obj_ptr.assume_init()
-
       }
       #[allow(non_snake_case)]
       #[allow(clippy::all)]
       #[napi::bindgen_prelude::ctor]
       fn #register_name() {
-        napi::bindgen_prelude::register_module_export(#js_name_lit, cb);
+        napi::bindgen_prelude::register_module_export(#js_name_lit, #cb_ident);
       }
     }
   }
