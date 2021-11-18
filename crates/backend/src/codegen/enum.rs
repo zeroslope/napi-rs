@@ -111,12 +111,14 @@ impl NapiEnum {
         Ident::new(format!("enum_value_{}", index).as_str(), Span::call_site());
 
       define_properties.push(quote! {
-        let #val_ident = move || {
+        let #val_ident = || {
           println!("enum e, {}", #index);
           let mut #val_ident = std::mem::MaybeUninit::uninit();
           napi::sys::napi_create_int32(env, #val_lit, #val_ident.as_mut_ptr());
+          println!("enum e, {:p}", env);
           let #enum_value_ident = #val_ident.assume_init();
           napi::sys::napi_set_named_property(env, obj_ptr, #name_lit.as_ptr() as *const _, #enum_value_ident);
+          println!("enum e, {:p}", env);
         };
         #val_ident();
       })
