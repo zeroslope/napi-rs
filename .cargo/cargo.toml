@@ -1,2 +1,9 @@
 [target.i686-pc-windows-msvc]
-rustflags = ["-C", "inline-threshold=0"]
+rustflags = [
+  "-C",
+  "inline-threshold=0",
+  "-C",
+  "no-vectorize-loops",
+  "-C",
+  "no-vectorize-slp",
+]
