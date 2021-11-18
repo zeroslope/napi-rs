@@ -105,18 +105,19 @@ impl NapiEnum {
 
     for (index, variant) in self.variants.iter().enumerate() {
       let name_lit = Literal::string(format!("{}\0", &variant.name.to_string()).as_str());
-      let val_lit = Literal::i32_unsuffixed(variant.val + 1);
+      let val_lit = Literal::i32_unsuffixed(variant.val);
       let val_ident = Ident::new(format!("val_{}", index).as_str(), Span::call_site());
       let enum_value_ident =
         Ident::new(format!("enum_value_{}", index).as_str(), Span::call_site());
 
       define_properties.push(quote! {
-        println!("enum e, {}", #index);
+        println!("enum e, env {}, {:p}", #index, env);
         let mut #val_ident = std::mem::MaybeUninit::uninit();
         napi::sys::napi_create_int32(env, #val_lit, #val_ident.as_mut_ptr());
         println!("enum e, {:p}", env);
         let #enum_value_ident = #val_ident.assume_init();
-        napi::sys::napi_set_named_property(env, obj_ptr, std::ffi::CStr::from_bytes_with_nul_unchecked(#name_lit.as_bytes()).as_ptr(), #enum_value_ident);
+        let name_lit_c_str = std::ffi::CStr::from_bytes_with_nul_unchecked(#name_lit.as_bytes());
+        napi::sys::napi_set_named_property(env, obj_ptr, name_lit_c_str.as_ptr(), #enum_value_ident);
         println!("enum e, {:p}", env);
       })
     }
@@ -130,6 +131,7 @@ impl NapiEnum {
           let mut obj_ptr = std::mem::MaybeUninit::uninit();
 
           napi::sys::napi_create_object(env, obj_ptr.as_mut_ptr());
+          println!("enum begin, env: {:p}", env);
           let obj_ptr = obj_ptr.assume_init();
           #(#define_properties)*
 

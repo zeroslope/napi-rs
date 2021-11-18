@@ -79,12 +79,12 @@ pub unsafe extern "C" fn napi_register_module_v1(
         let raw_props: Vec<_> = props.iter().map(|prop| prop.raw()).collect();
 
         let mut class_ptr = std::mem::MaybeUninit::uninit();
-
+        let js_name_c_str = std::ffi::CStr::from_bytes_with_nul_unchecked(js_name.as_bytes());
         check_status_or_throw!(
           env,
           sys::napi_define_class(
             env,
-            js_name.as_ptr() as *const _,
+            js_name_c_str.as_ptr(),
             js_name.len() as sys::size_t - 1,
             Some(ctor),
             ptr::null_mut(),
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn napi_register_module_v1(
 
         check_status_or_throw!(
           env,
-          sys::napi_set_named_property(env, exports, js_name.as_ptr() as *const _, class_ptr),
+          sys::napi_set_named_property(env, exports, js_name_c_str.as_ptr(), class_ptr),
           "Failed to register class `{}` generate by struct `{}`",
           &js_name,
           &rust_name

@@ -302,12 +302,12 @@ impl NapiFn {
         fn #module_register_name() {
           unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
             let mut fn_ptr = std::mem::MaybeUninit::<napi::sys::napi_value>::uninit();
-            let js_name_c_string = std::ffi::CString::from_vec_unchecked(#js_name.as_bytes().to_vec());
+            let js_name_c_string = std::ffi::CStr::from_bytes_with_nul_unchecked(#js_name.as_bytes());
             napi::bindgen_prelude::check_status_or_throw!(
               env,
               napi::sys::napi_create_function(
                 env,
-                #js_name.as_ptr() as *const _,
+                js_name_c_string.as_ptr(),
                 #js_name_len as napi::sys::size_t,
                 Some(#intermediate_ident),
                 std::ptr::null_mut(),
