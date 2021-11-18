@@ -127,6 +127,7 @@ impl NapiEnum {
       #[allow(clippy::all)]
       #[napi::bindgen_prelude::ctor]
       fn #register_name() {
+        #[inline(never)]
         unsafe fn cb(env: napi::sys::napi_env) -> napi::sys::napi_value {
           let mut obj_ptr = std::mem::MaybeUninit::uninit();
 
