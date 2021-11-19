@@ -24,7 +24,7 @@ impl<const N: usize> CallbackInfo<N> {
     env: sys::napi_env,
     callback_info: sys::napi_callback_info,
     required_argc: Option<usize>,
-  ) -> Result<Self> {
+  ) -> Self {
     let mut this = ptr::null_mut();
     #[cfg(not(all(target_os = "windows", target_arch = "x86")))]
     let mut args = [ptr::null_mut(); N];
@@ -33,7 +33,8 @@ impl<const N: usize> CallbackInfo<N> {
     let mut argc = N as sys::size_t;
 
     unsafe {
-      check_status!(
+      check_status_or_throw!(
+        env,
         sys::napi_get_cb_info(
           env,
           callback_info,
@@ -43,22 +44,19 @@ impl<const N: usize> CallbackInfo<N> {
           ptr::null_mut(),
         ),
         "Failed to initialize napi function call."
-      )?;
+      );
     };
 
     if let Some(required_argc) = required_argc {
       if required_argc > argc as usize {
-        return Err(Error::new(
-          Status::InvalidArg,
-          format!(
-            "{} arguments required by received {}.",
-            required_argc, &argc
-          ),
-        ));
+        panic!(
+          "{} arguments required by received {}.",
+          required_argc, &argc
+        );
       }
     }
 
-    Ok(Self { env, this, args })
+    Self { env, this, args }
   }
 
   pub fn get_arg(&self, index: usize) -> sys::napi_value {
@@ -124,37 +122,39 @@ impl<const N: usize> CallbackInfo<N> {
     Ok(instance)
   }
 
-  pub fn unwrap_borrow_mut<T>(&mut self) -> Result<&'static mut T>
+  pub fn unwrap_borrow_mut<T>(&mut self) -> &'static mut T
   where
     T: FromNapiMutRef + TypeName,
   {
     let mut wrapped_val: *mut c_void = std::ptr::null_mut();
 
     unsafe {
-      check_status!(
+      check_status_or_throw!(
+        self.env,
         sys::napi_unwrap(self.env, self.this, &mut wrapped_val),
         "Failed to unwrap exclusive reference of `{}` type from napi value",
         T::type_name(),
-      )?;
+      );
 
-      Ok(&mut *(wrapped_val as *mut T))
+      &mut *(wrapped_val as *mut T)
     }
   }
 
-  pub fn unwrap_borrow<T>(&mut self) -> Result<&'static T>
+  pub fn unwrap_borrow<T>(&mut self) -> &'static T
   where
     T: FromNapiRef + TypeName,
   {
     let mut wrapped_val: *mut c_void = std::ptr::null_mut();
 
     unsafe {
-      check_status!(
+      check_status_or_throw!(
+        self.env,
         sys::napi_unwrap(self.env, self.this, &mut wrapped_val),
         "Failed to unwrap shared reference of `{}` type from napi value",
         T::type_name(),
-      )?;
+      );
 
-      Ok(&*(wrapped_val as *const T))
+      &*(wrapped_val as *const T)
     }
   }
 }

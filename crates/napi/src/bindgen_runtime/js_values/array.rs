@@ -24,20 +24,21 @@ impl Array {
     })
   }
 
-  pub fn get<T: FromNapiValue>(&self, index: u32) -> Result<Option<T>> {
+  pub fn get<T: FromNapiValue>(&self, index: u32) -> Option<T> {
     if index >= self.len() {
-      return Ok(None);
+      return None;
     }
 
     let mut ret = ptr::null_mut();
     unsafe {
-      check_status!(
+      check_status_or_throw!(
+        self.env,
         sys::napi_get_element(self.env, self.inner, index, &mut ret),
         "Failed to get element with index `{}`",
         index,
-      )?;
+      );
 
-      Ok(Some(T::from_napi_value(self.env, ret)?))
+      Some(T::from_napi_value(self.env, ret))
     }
   }
 
@@ -87,31 +88,30 @@ impl ToNapiValue for Array {
 }
 
 impl FromNapiValue for Array {
-  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Self {
     let mut is_arr = false;
-    check_status!(
+    check_status_or_throw!(
+      env,
       sys::napi_is_array(env, napi_val, &mut is_arr),
       "Failed to check given napi value is array"
-    )?;
+    );
 
     if is_arr {
       let mut len = 0;
 
-      check_status!(
+      check_status_or_throw!(
+        env,
         sys::napi_get_array_length(env, napi_val, &mut len),
         "Failed to get Array length",
-      )?;
+      );
 
-      Ok(Array {
+      Array {
         inner: napi_val,
         env,
         len,
-      })
+      }
     } else {
-      Err(Error::new(
-        Status::InvalidArg,
-        "Given napi value is not an array".to_owned(),
-      ))
+      panic!("Given napi value is not an array");
     }
   }
 }
@@ -151,22 +151,22 @@ impl<T> FromNapiValue for Vec<T>
 where
   T: FromNapiValue,
 {
-  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
-    let arr = Array::from_napi_value(env, napi_val)?;
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Self {
+    let arr = Array::from_napi_value(env, napi_val);
     let mut vec = vec![];
 
     for i in 0..arr.len() {
-      if let Some(val) = arr.get::<T>(i)? {
+      if let Some(val) = arr.get::<T>(i) {
         vec.push(val);
       } else {
-        return Err(Error::new(
+        Error::new(
           Status::InvalidArg,
           "Found inconsistent data type in Array<T> when converting to Rust Vec<T>".to_owned(),
-        ));
+        );
       }
     }
 
-    Ok(vec)
+    vec
   }
 }
 

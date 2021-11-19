@@ -1,5 +1,5 @@
 use super::{FromNapiValue, ToNapiValue, TypeName};
-use crate::{type_of, Status, ValueType};
+use crate::{type_of_, JsError, Status, ValueType};
 
 const ERROR_MSG: &str = "The return value of typeof(T) should not be equal in Either";
 
@@ -27,18 +27,15 @@ impl<A: TypeName + FromNapiValue + ToNapiValue, B: TypeName + FromNapiValue + To
 impl<A: TypeName + FromNapiValue + ToNapiValue, B: TypeName + FromNapiValue + ToNapiValue>
   FromNapiValue for Either<A, B>
 {
-  unsafe fn from_napi_value(
-    env: napi_sys::napi_env,
-    napi_val: napi_sys::napi_value,
-  ) -> crate::Result<Self> {
+  unsafe fn from_napi_value(env: napi_sys::napi_env, napi_val: napi_sys::napi_value) -> Self {
     debug_assert!(A::value_type() != B::value_type(), "{}", ERROR_MSG);
-    let js_type = type_of!(env, napi_val)?;
+    let js_type = type_of_!(env, napi_val);
     if js_type == A::value_type() {
-      A::from_napi_value(env, napi_val).map(Self::A)
+      Self::A(A::from_napi_value(env, napi_val))
     } else if js_type == B::value_type() {
-      B::from_napi_value(env, napi_val).map(Self::B)
+      Self::B(B::from_napi_value(env, napi_val))
     } else {
-      Err(crate::Error::new(
+      JsError::from(crate::Error::new(
         Status::InvalidArg,
         format!(
           "Expect type {} or {}, but got {}",
@@ -47,6 +44,8 @@ impl<A: TypeName + FromNapiValue + ToNapiValue, B: TypeName + FromNapiValue + To
           js_type
         ),
       ))
+      .throw_into(env);
+      Self::A(A::from_napi_value(env, napi_val))
     }
   }
 }
@@ -97,10 +96,7 @@ impl<
     C: TypeName + FromNapiValue + ToNapiValue,
   > FromNapiValue for Either3<A, B, C>
 {
-  unsafe fn from_napi_value(
-    env: napi_sys::napi_env,
-    napi_val: napi_sys::napi_value,
-  ) -> crate::Result<Self> {
+  unsafe fn from_napi_value(env: napi_sys::napi_env, napi_val: napi_sys::napi_value) -> Self {
     debug_assert!(
       {
         let mut types = vec![A::value_type(), B::value_type(), C::value_type()];
@@ -110,15 +106,15 @@ impl<
       "{}",
       ERROR_MSG
     );
-    let js_type = type_of!(env, napi_val)?;
+    let js_type = type_of_!(env, napi_val);
     if js_type == A::value_type() {
-      A::from_napi_value(env, napi_val).map(Self::A)
+      Self::A(A::from_napi_value(env, napi_val))
     } else if js_type == B::value_type() {
-      B::from_napi_value(env, napi_val).map(Self::B)
+      Self::B(B::from_napi_value(env, napi_val))
     } else if js_type == C::value_type() {
-      C::from_napi_value(env, napi_val).map(Self::C)
+      Self::C(C::from_napi_value(env, napi_val))
     } else {
-      Err(crate::Error::new(
+      JsError::from(crate::Error::new(
         Status::InvalidArg,
         format!(
           "Expect type {} or {} or {}, but got {}",
@@ -128,6 +124,8 @@ impl<
           js_type
         ),
       ))
+      .throw_into(env);
+      Self::A(A::from_napi_value(env, napi_val))
     }
   }
 }
@@ -186,10 +184,7 @@ impl<
     D: TypeName + FromNapiValue + ToNapiValue,
   > FromNapiValue for Either4<A, B, C, D>
 {
-  unsafe fn from_napi_value(
-    env: napi_sys::napi_env,
-    napi_val: napi_sys::napi_value,
-  ) -> crate::Result<Self> {
+  unsafe fn from_napi_value(env: napi_sys::napi_env, napi_val: napi_sys::napi_value) -> Self {
     debug_assert!(
       {
         let mut types = vec![
@@ -204,17 +199,17 @@ impl<
       "{}",
       ERROR_MSG
     );
-    let js_type = type_of!(env, napi_val)?;
+    let js_type = type_of_!(env, napi_val);
     if js_type == A::value_type() {
-      A::from_napi_value(env, napi_val).map(Self::A)
+      Self::A(A::from_napi_value(env, napi_val))
     } else if js_type == B::value_type() {
-      B::from_napi_value(env, napi_val).map(Self::B)
+      Self::B(B::from_napi_value(env, napi_val))
     } else if js_type == C::value_type() {
-      C::from_napi_value(env, napi_val).map(Self::C)
+      Self::C(C::from_napi_value(env, napi_val))
     } else if js_type == D::value_type() {
-      D::from_napi_value(env, napi_val).map(Self::D)
+      Self::D(D::from_napi_value(env, napi_val))
     } else {
-      Err(crate::Error::new(
+      JsError::from(crate::Error::new(
         Status::InvalidArg,
         format!(
           "Expect type {} or {} or {} or {}, but got {}",
@@ -225,6 +220,8 @@ impl<
           js_type
         ),
       ))
+      .throw_into(env);
+      Self::A(A::from_napi_value(env, napi_val))
     }
   }
 }
@@ -289,10 +286,7 @@ impl<
     E: TypeName + FromNapiValue + ToNapiValue,
   > FromNapiValue for Either5<A, B, C, D, E>
 {
-  unsafe fn from_napi_value(
-    env: napi_sys::napi_env,
-    napi_val: napi_sys::napi_value,
-  ) -> crate::Result<Self> {
+  unsafe fn from_napi_value(env: napi_sys::napi_env, napi_val: napi_sys::napi_value) -> Self {
     debug_assert!(
       {
         let mut types = vec![
@@ -308,19 +302,19 @@ impl<
       "{}",
       ERROR_MSG
     );
-    let js_type = type_of!(env, napi_val)?;
+    let js_type = type_of_!(env, napi_val);
     if js_type == A::value_type() {
-      A::from_napi_value(env, napi_val).map(Self::A)
+      Self::A(A::from_napi_value(env, napi_val))
     } else if js_type == B::value_type() {
-      B::from_napi_value(env, napi_val).map(Self::B)
+      Self::B(B::from_napi_value(env, napi_val))
     } else if js_type == C::value_type() {
-      C::from_napi_value(env, napi_val).map(Self::C)
+      Self::C(C::from_napi_value(env, napi_val))
     } else if js_type == D::value_type() {
-      D::from_napi_value(env, napi_val).map(Self::D)
+      Self::D(D::from_napi_value(env, napi_val))
     } else if js_type == E::value_type() {
-      E::from_napi_value(env, napi_val).map(Self::E)
+      Self::E(E::from_napi_value(env, napi_val))
     } else {
-      Err(crate::Error::new(
+      JsError::from(crate::Error::new(
         Status::InvalidArg,
         format!(
           "Expect type {} or {} or {} or {} or {}, but got {}",
@@ -329,9 +323,11 @@ impl<
           C::value_type(),
           D::value_type(),
           E::value_type(),
-          js_type
+          js_type,
         ),
       ))
+      .throw_into(env);
+      Self::A(A::from_napi_value(env, napi_val))
     }
   }
 }

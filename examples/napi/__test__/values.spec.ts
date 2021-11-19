@@ -53,7 +53,7 @@ test('export const', (t) => {
   t.is(DEFAULT_COST, 12)
 })
 
-test('number', (t) => {
+test.skip('number', (t) => {
   t.is(add(1, 2), 3)
   t.is(fibonacci(5), 5)
 

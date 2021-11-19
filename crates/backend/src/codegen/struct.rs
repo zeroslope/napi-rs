@@ -28,16 +28,17 @@ fn gen_napi_value_map_impl(name: &Ident, to_napi_val_impl: TokenStream) -> Token
       unsafe fn from_napi_ref(
         env: napi::bindgen_prelude::sys::napi_env,
         napi_val: napi::bindgen_prelude::sys::napi_value
-      ) -> napi::bindgen_prelude::Result<&'static Self> {
+      ) -> &'static Self {
         let mut wrapped_val: *mut std::ffi::c_void = std::ptr::null_mut();
 
-        napi::bindgen_prelude::check_status!(
+        napi::bindgen_prelude::check_status_or_throw!(
+          env,
           napi::bindgen_prelude::sys::napi_unwrap(env, napi_val, &mut wrapped_val),
           "Failed to recover `{}` type from napi value",
           #name_str,
-        )?;
+        );
 
-        Ok(&*(wrapped_val as *const #name))
+        &*(wrapped_val as *const #name)
       }
     }
 
@@ -45,16 +46,17 @@ fn gen_napi_value_map_impl(name: &Ident, to_napi_val_impl: TokenStream) -> Token
       unsafe fn from_napi_mut_ref(
         env: napi::bindgen_prelude::sys::napi_env,
         napi_val: napi::bindgen_prelude::sys::napi_value
-      ) -> napi::bindgen_prelude::Result<&'static mut Self> {
+      ) -> &'static mut Self {
         let mut wrapped_val: *mut std::ffi::c_void = std::ptr::null_mut();
 
-        napi::bindgen_prelude::check_status!(
+        napi::bindgen_prelude::check_status_or_throw!(
+          env,
           napi::bindgen_prelude::sys::napi_unwrap(env, napi_val, &mut wrapped_val),
           "Failed to recover `{}` type from napi value",
           #name_str,
-        )?;
+        );
 
-        Ok(&mut *(wrapped_val as *mut #name))
+        &mut *(wrapped_val as *mut #name)
       }
     }
   }
@@ -123,9 +125,9 @@ impl NapiStruct {
       let ty = &field.ty;
       match &field.name {
         syn::Member::Named(ident) => fields
-          .push(quote! { #ident: <#ty as FromNapiValue>::from_napi_value(env, cb.get_arg(#i))? }),
+          .push(quote! { #ident: <#ty as FromNapiValue>::from_napi_value(env, cb.get_arg(#i)) }),
         syn::Member::Unnamed(_) => {
-          fields.push(quote! { <#ty as FromNapiValue>::from_napi_value(env, cb.get_arg(#i))? });
+          fields.push(quote! { <#ty as FromNapiValue>::from_napi_value(env, cb.get_arg(#i)) });
         }
       }
     }
@@ -141,8 +143,8 @@ impl NapiStruct {
         env: napi::bindgen_prelude::sys::napi_env,
         cb: napi::bindgen_prelude::sys::napi_callback_info
       ) -> napi::bindgen_prelude::sys::napi_value {
-        napi::bindgen_prelude::CallbackInfo::<#fields_len>::new(env, cb, None)
-          .and_then(|cb| unsafe { cb.construct(#js_name_str, #construct) })
+        let cb = napi::bindgen_prelude::CallbackInfo::<#fields_len>::new(env, cb, None);
+        unsafe { cb.construct(#js_name_str, #construct) }
           .unwrap_or_else(|e| {
             unsafe { napi::bindgen_prelude::JsError::from(e).throw_into(env) };
             std::ptr::null_mut::<napi::bindgen_prelude::sys::napi_value__>()
@@ -243,13 +245,13 @@ impl NapiStruct {
       match &field.name {
         syn::Member::Named(ident) => {
           field_destructions.push(quote! { #ident });
-          obj_field_setters.push(quote! { obj.set(#field_js_name, #ident)?; });
-          obj_field_getters.push(quote! { let #ident: #ty = obj.get(#field_js_name)?.expect(&format!("Field {} should exist", #field_js_name)); });
+          obj_field_setters.push(quote! { obj.set(#field_js_name, #ident); });
+          obj_field_getters.push(quote! { let #ident: #ty = obj.get(#field_js_name).expect(&format!("Field {} should exist", #field_js_name)); });
         }
         syn::Member::Unnamed(i) => {
           field_destructions.push(quote! { arg#i });
-          obj_field_setters.push(quote! { obj.set(#field_js_name, arg#1)?; });
-          obj_field_getters.push(quote! { let arg#i: #ty = obj.get(#field_js_name)?.expect(&format!("Field {} should exist", #field_js_name)); });
+          obj_field_setters.push(quote! { obj.set(#field_js_name, arg#1); });
+          obj_field_getters.push(quote! { let arg#i: #ty = obj.get(#field_js_name).expect(&format!("Field {} should exist", #field_js_name)); });
         }
       }
     }
@@ -291,15 +293,15 @@ impl NapiStruct {
         unsafe fn from_napi_value(
           env: napi::bindgen_prelude::sys::napi_env,
           napi_val: napi::bindgen_prelude::sys::napi_value
-        ) -> napi::bindgen_prelude::Result<Self> {
+        ) -> Self {
           let env_wrapper = napi::bindgen_prelude::Env::from(env);
-          let mut obj = napi::bindgen_prelude::Object::from_napi_value(env, napi_val)?;
+          let mut obj = napi::bindgen_prelude::Object::from_napi_value(env, napi_val);
 
           #(#obj_field_getters)*
 
           let val = #destructed_fields;
 
-          Ok(val)
+          val
         }
       }
     }
@@ -328,16 +330,16 @@ impl NapiStruct {
               env: napi::bindgen_prelude::sys::napi_env,
               cb: napi::bindgen_prelude::sys::napi_callback_info
             ) -> napi::bindgen_prelude::sys::napi_value {
-              napi::bindgen_prelude::CallbackInfo::<0>::new(env, cb, Some(0))
-                .and_then(|mut cb| unsafe { cb.unwrap_borrow::<#struct_name>() })
-                .and_then(|obj| {
-                  let val = obj.#field_ident.to_owned();
-                  unsafe { <#ty as napi::bindgen_prelude::ToNapiValue>::to_napi_value(env, val) }
-                })
-                .unwrap_or_else(|e| {
-                  unsafe { napi::bindgen_prelude::JsError::from(e).throw_into(env) };
-                  std::ptr::null_mut::<napi::bindgen_prelude::sys::napi_value__>()
-                })
+              unsafe {
+                let mut cb = napi::bindgen_prelude::CallbackInfo::<0>::new(env, cb, Some(0));
+                let obj = cb.unwrap_borrow::<#struct_name>();
+                let val = obj.#field_ident.to_owned();
+                <#ty as napi::bindgen_prelude::ToNapiValue>::to_napi_value(env, val)
+                  .unwrap_or_else(|e| {
+                    napi::bindgen_prelude::JsError::from(e).throw_into(env);
+                    std::ptr::null_mut::<napi::bindgen_prelude::sys::napi_value__>()
+                  })
+              }
             }
           },
         ));
@@ -351,17 +353,11 @@ impl NapiStruct {
               env: napi::bindgen_prelude::sys::napi_env,
               cb: napi::bindgen_prelude::sys::napi_callback_info
             ) -> napi::bindgen_prelude::sys::napi_value {
-              napi::bindgen_prelude::CallbackInfo::<1>::new(env, cb, Some(1))
-                .and_then(|mut cb_info| unsafe {
-                  cb_info.unwrap_borrow_mut::<#struct_name>()
-                    .and_then(|obj| {
-                      <#ty as napi::bindgen_prelude::FromNapiValue>::from_napi_value(env, cb_info.get_arg(0))
-                        .and_then(move |val| {
-                          obj.#field_ident = val;
-                          <() as napi::bindgen_prelude::ToNapiValue>::to_napi_value(env, ())
-                        })
-                    })
-                })
+              let mut cb_info = napi::bindgen_prelude::CallbackInfo::<1>::new(env, cb, Some(1));
+              let obj = cb_info.unwrap_borrow_mut::<#struct_name>();
+              let val = unsafe { <#ty as napi::bindgen_prelude::FromNapiValue>::from_napi_value(env, cb_info.get_arg(0)) };
+              obj.#field_ident = val;
+              unsafe { <() as napi::bindgen_prelude::ToNapiValue>::to_napi_value(env, ()) }
                 .unwrap_or_else(|e| {
                   unsafe { napi::bindgen_prelude::JsError::from(e).throw_into(env) };
                   std::ptr::null_mut::<napi::bindgen_prelude::sys::napi_value__>()

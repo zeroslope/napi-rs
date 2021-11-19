@@ -2,13 +2,13 @@ use napi::{bindgen_prelude::*, JsGlobal, JsNull, JsUndefined};
 
 #[napi]
 fn list_obj_keys(obj: Object) -> Vec<String> {
-  Object::keys(&obj).unwrap()
+  Object::keys(&obj)
 }
 
 #[napi]
 fn create_obj(env: Env) -> Object {
   let mut obj = env.create_object().unwrap();
-  obj.set("test", 1).unwrap();
+  obj.set("test", 1);
 
   obj
 }

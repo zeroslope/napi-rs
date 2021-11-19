@@ -1,6 +1,6 @@
 use std::ptr;
 
-use crate::{bindgen_prelude::*, check_status, sys, type_of, Error, Result, Status, ValueType};
+use crate::{bindgen_prelude::*, check_status, sys, type_of_, Error, Result, Status, ValueType};
 
 pub struct Null;
 pub type Undefined = ();
@@ -22,13 +22,17 @@ impl ValidateNapiValue for Null {
 }
 
 impl FromNapiValue for Null {
-  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
-    match type_of!(env, napi_val) {
-      Ok(ValueType::Null) => Ok(Null),
-      _ => Err(Error::new(
-        Status::InvalidArg,
-        "Value is not null".to_owned(),
-      )),
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Self {
+    match type_of_!(env, napi_val) {
+      ValueType::Null => Null,
+      _ => {
+        JsError::from(Error::new(
+          Status::InvalidArg,
+          "Value is not null".to_owned(),
+        ))
+        .throw_into(env);
+        Null
+      }
     }
   }
 }
@@ -63,14 +67,17 @@ impl ValidateNapiValue for Undefined {
 }
 
 impl FromNapiValue for Undefined {
-  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Self {
     // TODO: with typecheck
-    match type_of!(env, napi_val) {
-      Ok(ValueType::Undefined) => Ok(()),
-      _ => Err(Error::new(
-        Status::InvalidArg,
-        "Value is not undefined".to_owned(),
-      )),
+    match type_of_!(env, napi_val) {
+      ValueType::Undefined => (),
+      _ => {
+        JsError::from(Error::new(
+          Status::InvalidArg,
+          "Value is not undefined".to_owned(),
+        ))
+        .throw_into(env);
+      }
     }
   }
 }

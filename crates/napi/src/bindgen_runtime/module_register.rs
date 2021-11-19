@@ -56,13 +56,9 @@ pub unsafe extern "C" fn napi_register_module_v1(
   MODULE_REGISTER_CALLBACK.with(|to_register_exports| {
     for (name, callback) in to_register_exports.borrow().iter() {
       let name_c_str = CStr::from_bytes_with_nul_unchecked(name.as_bytes());
+      println!("name: {}", name);
       unsafe {
-        check_status_or_throw!(
-          env,
-          sys::napi_set_named_property(env, exports, name_c_str.as_ptr(), callback(env)),
-          "Set exports failed [{}]",
-          name
-        );
+        sys::napi_set_named_property(env, exports, name_c_str.as_ptr(), callback(env));
       }
     }
   });

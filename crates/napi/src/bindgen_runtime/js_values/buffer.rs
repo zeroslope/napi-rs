@@ -59,18 +59,19 @@ impl TypeName for Buffer {
 }
 
 impl FromNapiValue for Buffer {
-  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Self {
     let mut buf = ptr::null_mut();
     let mut len = 0;
 
-    check_status!(
+    check_status_or_throw!(
+      env,
       sys::napi_get_buffer_info(env, napi_val, &mut buf, &mut len),
       "Failed to convert napi buffer into rust Vec<u8>"
-    )?;
+    );
     let len = len as usize;
-    Ok(Self {
+    Self {
       inner: mem::ManuallyDrop::new(Vec::from_raw_parts(buf as *mut _, len, len)),
-    })
+    }
   }
 }
 

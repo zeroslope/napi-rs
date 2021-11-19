@@ -29,7 +29,7 @@ impl NapiEnum {
       let val = Literal::i32_unsuffixed(v.val);
       let v_name = &v.name;
 
-      from_napi_branches.push(quote! { #val => Ok(#name::#v_name) });
+      from_napi_branches.push(quote! { #val => #name::#v_name });
       to_napi_branches.push(quote! { #name::#v_name => #val });
     });
 
@@ -48,7 +48,7 @@ impl NapiEnum {
         unsafe fn validate(
           env: napi::sys::napi_env,
           napi_val: napi::sys::napi_value
-        ) -> napi::bindgen_prelude::Result<()> {
+        ) {
           napi::bindgen_prelude::assert_type_of!(env, napi_val, napi::bindgen_prelude::ValueType::Number)
         }
       }
@@ -57,25 +57,19 @@ impl NapiEnum {
         unsafe fn from_napi_value(
           env: napi::sys::napi_env,
           napi_val: napi::sys::napi_value
-        ) -> napi::bindgen_prelude::Result<Self> {
-          let val = i32::from_napi_value(env, napi_val).map_err(|e| {
-            napi::bindgen_prelude::error!(
-              e.status,
-              "Failed to convert napi value into enum `{}`. {}",
-              #name_str,
-              e,
-            )
-          })?;
+        ) -> Self {
+          let val = i32::from_napi_value(env, napi_val);
 
           match val {
             #(#from_napi_branches,)*
             _ => {
-              Err(napi::bindgen_prelude::error!(
+              napi::JsError::from(napi::bindgen_prelude::error!(
                 napi::bindgen_prelude::Status::InvalidArg,
                 "value `{}` does not match any variant of enum `{}`",
                 val,
                 #name_str
-              ))
+              )).throw_into(env);
+              std::mem::transmute::<_, Self>(0u8)
             }
           }
         }

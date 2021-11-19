@@ -1,4 +1,4 @@
-use std::ffi::{c_void, CString};
+use std::ffi::{c_void, CStr};
 use std::future;
 use std::pin::Pin;
 use std::ptr;
@@ -6,7 +6,7 @@ use std::task::{Context, Poll};
 
 use tokio::sync::oneshot::{channel, Receiver, Sender};
 
-use crate::{check_status, Error, Result, Status};
+use crate::{check_status_or_throw, Error, Result, Status};
 
 use super::FromNapiValue;
 
@@ -18,21 +18,20 @@ unsafe impl<T: FromNapiValue> Send for Promise<T> {}
 unsafe impl<T: FromNapiValue> Sync for Promise<T> {}
 
 impl<T: FromNapiValue> FromNapiValue for Promise<T> {
-  unsafe fn from_napi_value(
-    env: napi_sys::napi_env,
-    napi_val: napi_sys::napi_value,
-  ) -> crate::Result<Self> {
+  unsafe fn from_napi_value(env: napi_sys::napi_env, napi_val: napi_sys::napi_value) -> Self {
     let mut then = ptr::null_mut();
-    let then_c_string = CString::new("then")?;
-    check_status!(
+    let then_c_string = CStr::from_bytes_with_nul_unchecked(b"then\0");
+    check_status_or_throw!(
+      env,
       napi_sys::napi_get_named_property(env, napi_val, then_c_string.as_ptr(), &mut then,),
       "Failed to get then function"
-    )?;
+    );
     let mut promise_after_then = ptr::null_mut();
     let mut then_js_cb = ptr::null_mut();
     let (tx, rx) = channel();
     let tx_ptr = Box::into_raw(Box::new(tx));
-    check_status!(
+    check_status_or_throw!(
+      env,
       napi_sys::napi_create_function(
         env,
         then_c_string.as_ptr(),
@@ -42,8 +41,9 @@ impl<T: FromNapiValue> FromNapiValue for Promise<T> {
         &mut then_js_cb,
       ),
       "Failed to create then callback"
-    )?;
-    check_status!(
+    );
+    check_status_or_throw!(
+      env,
       napi_sys::napi_call_function(
         env,
         napi_val,
@@ -53,10 +53,11 @@ impl<T: FromNapiValue> FromNapiValue for Promise<T> {
         &mut promise_after_then,
       ),
       "Failed to call then method"
-    )?;
+    );
     let mut catch = ptr::null_mut();
-    let catch_c_string = CString::new("catch")?;
-    check_status!(
+    let catch_c_string = CStr::from_bytes_with_nul_unchecked(b"catch\0");
+    check_status_or_throw!(
+      env,
       napi_sys::napi_get_named_property(
         env,
         promise_after_then,
@@ -64,9 +65,10 @@ impl<T: FromNapiValue> FromNapiValue for Promise<T> {
         &mut catch
       ),
       "Failed to get then function"
-    )?;
+    );
     let mut catch_js_cb = ptr::null_mut();
-    check_status!(
+    check_status_or_throw!(
+      env,
       napi_sys::napi_create_function(
         env,
         catch_c_string.as_ptr(),
@@ -76,8 +78,9 @@ impl<T: FromNapiValue> FromNapiValue for Promise<T> {
         &mut catch_js_cb
       ),
       "Failed to create catch callback"
-    )?;
-    check_status!(
+    );
+    check_status_or_throw!(
+      env,
       napi_sys::napi_call_function(
         env,
         promise_after_then,
@@ -87,10 +90,10 @@ impl<T: FromNapiValue> FromNapiValue for Promise<T> {
         ptr::null_mut()
       ),
       "Failed to call catch method"
-    )?;
-    Ok(Promise {
+    );
+    Promise {
       value: Box::pin(rx),
-    })
+    }
   }
 }
 
@@ -127,7 +130,7 @@ unsafe extern "C" fn then_callback<T: FromNapiValue>(
     get_cb_status == napi_sys::Status::napi_ok,
     "Get callback info from Promise::then failed"
   );
-  let resolve_value_t = Box::new(T::from_napi_value(env, resolved_value[0]));
+  let resolve_value_t = Box::new(Ok(T::from_napi_value(env, resolved_value[0])));
   let sender = Box::from_raw(data as *mut Sender<*mut Result<T>>);
   sender
     .send(Box::into_raw(resolve_value_t))

@@ -10,7 +10,7 @@
 /// ```
 use std::ptr;
 
-use crate::{check_status, sys};
+use crate::{check_status, check_status_or_throw, sys};
 
 use super::{FromNapiValue, ToNapiValue, TypeName};
 
@@ -38,30 +38,38 @@ impl TypeName for BigInt {
 }
 
 impl FromNapiValue for BigInt {
-  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> crate::Result<Self> {
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Self {
     let mut word_count = 0;
-    check_status!(sys::napi_get_value_bigint_words(
+    check_status_or_throw!(
       env,
-      napi_val,
-      ptr::null_mut(),
-      &mut word_count,
-      ptr::null_mut(),
-    ))?;
+      sys::napi_get_value_bigint_words(
+        env,
+        napi_val,
+        ptr::null_mut(),
+        &mut word_count,
+        ptr::null_mut(),
+      ),
+      "Get bigint word count failed"
+    );
     let mut words: Vec<u64> = Vec::with_capacity(word_count as usize);
     let mut sign_bit = 0;
-    check_status!(sys::napi_get_value_bigint_words(
+    check_status_or_throw!(
       env,
-      napi_val,
-      &mut sign_bit,
-      &mut word_count,
-      words.as_mut_ptr(),
-    ))?;
+      sys::napi_get_value_bigint_words(
+        env,
+        napi_val,
+        &mut sign_bit,
+        &mut word_count,
+        words.as_mut_ptr(),
+      ),
+      "Get bigint words failed"
+    );
 
     words.set_len(word_count as usize);
-    Ok(BigInt {
+    BigInt {
       sign_bit: sign_bit == 1,
       words,
-    })
+    }
   }
 }
 

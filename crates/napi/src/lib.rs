@@ -136,27 +136,41 @@ macro_rules! type_of {
 }
 
 #[doc(hidden)]
+#[macro_export(local_inner_macros)]
+macro_rules! type_of_ {
+  ($env:expr, $value:expr) => {{
+    let mut value_type = 0;
+    $crate::check_status_or_throw!(
+      $env,
+      $crate::sys::napi_typeof($env, $value, &mut value_type),
+      "type of failed"
+    );
+    $crate::ValueType::from(value_type)
+  }};
+}
+
+#[doc(hidden)]
 #[macro_export]
 macro_rules! assert_type_of {
-  ($env: expr, $value:expr, $value_ty: expr) => {
-    $crate::type_of!($env, $value).and_then(|received_type| {
-      if received_type == $value_ty {
-        Ok(())
-      } else {
-        Err($crate::Error::new(
+  ($env: expr, $value:expr, $value_ty: expr) => {{
+    let mut value_type = 0;
+    unsafe {
+      $crate::sys::napi_typeof($env, $value, &mut value_type);
+    };
+    let t = $crate::ValueType::from(value_type);
+    if $value_ty != t {
+      unsafe {
+        $crate::JsError::from($crate::Error::new(
           $crate::Status::InvalidArg,
-          format!(
-            "Expect value to be {}, but received {}",
-            $value_ty, received_type
-          ),
+          format!("Expect value to be {}, but received {}", $value_ty, t),
         ))
+        .throw_into($env);
       }
-    })
-  };
+    }
+  }};
 }
 
 #[allow(dead_code)]
-#[cfg(debug_assertions)]
 pub(crate) unsafe fn log_js_value<V: AsRef<[sys::napi_value]>>(
   // `info`, `log`, `warning` or `error`
   method: &str,

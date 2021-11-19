@@ -1,10 +1,10 @@
-use std::ffi::c_void;
+use std::ffi::{c_void, CStr};
 use std::ptr;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicPtr, AtomicU8, Ordering};
 
 use super::{FromNapiValue, ToNapiValue, TypeName};
-use crate::{async_work, check_status, Env, Error, JsError, JsObject, NapiValue, Status, Task};
+use crate::{async_work, check_status_or_throw, Error, JsError, Status, Task};
 
 pub struct AsyncTask<T: Task> {
   inner: T,
@@ -45,11 +45,7 @@ pub struct AbortSignal {
 }
 
 impl FromNapiValue for AbortSignal {
-  unsafe fn from_napi_value(
-    env: napi_sys::napi_env,
-    napi_val: napi_sys::napi_value,
-  ) -> crate::Result<Self> {
-    let mut signal = JsObject::from_raw_unchecked(env, napi_val);
+  unsafe fn from_napi_value(env: napi_sys::napi_env, napi_val: napi_sys::napi_value) -> Self {
     let async_work_inner: Rc<AtomicPtr<napi_sys::napi_async_work__>> =
       Rc::new(AtomicPtr::new(ptr::null_mut()));
     let raw_promise: Rc<AtomicPtr<napi_sys::napi_deferred__>> =
@@ -60,21 +56,43 @@ impl FromNapiValue for AbortSignal {
       raw_deferred: raw_promise.clone(),
       status: task_status.clone(),
     };
-    let js_env = Env::from_raw(env);
-    check_status!(napi_sys::napi_wrap(
+    check_status_or_throw!(
       env,
-      signal.0.value,
-      Box::into_raw(Box::new(abort_controller)) as *mut _,
-      Some(async_task_abort_controller_finalize),
-      ptr::null_mut(),
-      ptr::null_mut(),
-    ))?;
-    signal.set_named_property("onabort", js_env.create_function("onabort", on_abort)?)?;
-    Ok(AbortSignal {
+      napi_sys::napi_wrap(
+        env,
+        napi_val,
+        Box::into_raw(Box::new(abort_controller)) as *mut _,
+        Some(async_task_abort_controller_finalize),
+        ptr::null_mut(),
+        ptr::null_mut(),
+      ),
+      "Wrap abort signal failed"
+    );
+    let mut fn_result = ptr::null_mut();
+    let name = CStr::from_bytes_with_nul_unchecked(b"onabort\0");
+    check_status_or_throw!(
+      env,
+      napi_sys::napi_create_function(
+        env,
+        name.as_ptr(),
+        7,
+        Some(on_abort),
+        ptr::null_mut(),
+        &mut fn_result,
+      ),
+      "Create on abort function failed"
+    );
+
+    check_status_or_throw!(
+      env,
+      napi_sys::napi_set_named_property(env, napi_val, name.as_ptr(), fn_result),
+      "Set onabort on signal failed"
+    );
+    AbortSignal {
       raw_work: async_work_inner,
       raw_deferred: raw_promise,
       status: task_status,
-    })
+    }
   }
 }
 

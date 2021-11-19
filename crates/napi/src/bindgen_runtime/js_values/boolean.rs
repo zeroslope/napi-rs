@@ -30,14 +30,15 @@ impl ToNapiValue for bool {
 }
 
 impl FromNapiValue for bool {
-  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Self {
     let mut ret = false;
 
-    check_status!(
+    check_status_or_throw!(
+      env,
       sys::napi_get_value_bool(env, napi_val, &mut ret),
       "Failed to convert napi value into rust type `bool`",
-    )?;
+    );
 
-    Ok(ret)
+    ret
   }
 }

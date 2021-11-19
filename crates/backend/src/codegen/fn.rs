@@ -53,17 +53,15 @@ impl TryToTokens for NapiFn {
         if call_from_factory {
           return std::ptr::null_mut();
         }
-        napi::bindgen_prelude::CallbackInfo::<#args_len>::new(env, cb, None).and_then(|mut cb| {
-          #(#arg_conversions)*
-          #native_call
-        })
+        let cb = napi::bindgen_prelude::CallbackInfo::<#args_len>::new(env, cb, None);
+        #(#arg_conversions)*
+        #native_call
       }
     } else {
       quote! {
-        napi::bindgen_prelude::CallbackInfo::<#args_len>::new(env, cb, None).and_then(|mut cb| {
-          #(#arg_conversions)*
-          #native_call
-        })
+        let mut cb = napi::bindgen_prelude::CallbackInfo::<#args_len>::new(env, cb, None);
+        #(#arg_conversions)*
+        #native_call
       }
     };
 
@@ -72,15 +70,18 @@ impl TryToTokens for NapiFn {
       #[doc(hidden)]
       #[allow(non_snake_case)]
       #[allow(clippy::all)]
-      extern "C" fn #intermediate_ident(
+      pub extern "C" fn #intermediate_ident(
         env: napi::sys::napi_env,
         cb: napi::sys::napi_callback_info
       ) -> napi::sys::napi_value {
         unsafe {
-          #function_call.unwrap_or_else(|e| {
-            napi::bindgen_prelude::JsError::from(e).throw_into(env);
-            std::ptr::null_mut::<napi::sys::napi_value__>()
-          })
+          match { #function_call } {
+            Ok(v) => v,
+            Err(e) => {
+              napi::bindgen_prelude::JsError::from(e).throw_into(env);
+              std::ptr::null_mut()
+            }
+          }
         }
       }
 
@@ -101,10 +102,10 @@ impl NapiFn {
     if let Some(parent) = &self.parent {
       match self.fn_self {
         Some(FnSelf::Ref) => {
-          arg_conversions.push(quote! { let this = cb.unwrap_borrow::<#parent>()?; });
+          arg_conversions.push(quote! { let this = cb.unwrap_borrow::<#parent>(); });
         }
         Some(FnSelf::MutRef) => {
-          arg_conversions.push(quote! { let this = cb.unwrap_borrow_mut::<#parent>()?; });
+          arg_conversions.push(quote! { let this = cb.unwrap_borrow_mut::<#parent>(); });
         }
         _ => {}
       };
@@ -149,28 +150,26 @@ impl NapiFn {
         ..
       }) => {
         quote! {
-          let #arg_name = <#elem as napi::bindgen_prelude::FromNapiMutRef>::from_napi_mut_ref(env, cb.get_arg(#index))?;
+          let #arg_name = <#elem as napi::bindgen_prelude::FromNapiMutRef>::from_napi_mut_ref(env, cb.get_arg(#index));
         }
       }
       syn::Type::Reference(syn::TypeReference { elem, .. }) => {
         quote! {
-          let #arg_name = <#elem as napi::bindgen_prelude::FromNapiRef>::from_napi_ref(env, cb.get_arg(#index))?;
+          let #arg_name = <#elem as napi::bindgen_prelude::FromNapiRef>::from_napi_ref(env, cb.get_arg(#index));
         }
       }
       _ => {
         let type_check = if self.strict {
           quote! {
-            <#ty as napi::bindgen_prelude::ValidateNapiValue>::validate(env, cb.get_arg(#index))?;
+            <#ty as napi::bindgen_prelude::ValidateNapiValue>::validate(env, cb.get_arg(#index));
           }
         } else {
           quote! {}
         };
 
         quote! {
-          let #arg_name = {
-            #type_check
-            <#ty as napi::bindgen_prelude::FromNapiValue>::from_napi_value(env, cb.get_arg(#index))?
-          };
+          #type_check
+          let #arg_name = <#ty as napi::bindgen_prelude::FromNapiValue>::from_napi_value(env, cb.get_arg(#index));
         }
       }
     }
@@ -191,7 +190,7 @@ impl NapiFn {
     let ret = match &cb.ret {
       Some(ty) => {
         quote! {
-          let ret = <#ty as napi::bindgen_prelude::FromNapiValue>::from_napi_value(env, ret_ptr)?;
+          let ret = <#ty as napi::bindgen_prelude::FromNapiValue>::from_napi_value(env, ret_ptr);
 
           Ok(ret)
         }
@@ -200,7 +199,7 @@ impl NapiFn {
     };
 
     quote! {
-      napi::bindgen_prelude::assert_type_of!(env, cb.get_arg(#index), napi::bindgen_prelude::ValueType::Function)?;
+      napi::bindgen_prelude::assert_type_of!(env, cb.get_arg(#index), napi::bindgen_prelude::ValueType::Function);
       let #arg_name = |#(#inputs),*| {
         let args = vec![
           #(#arg_conversions),*
@@ -208,7 +207,8 @@ impl NapiFn {
 
         let mut ret_ptr = std::ptr::null_mut();
 
-        napi::bindgen_prelude::check_status!(
+        napi::bindgen_prelude::check_status_or_throw!(
+          env,
           napi::sys::napi_call_function(
             env,
             cb.this(),
@@ -218,7 +218,7 @@ impl NapiFn {
             &mut ret_ptr
           ),
           "Failed to call napi callback",
-        )?;
+        );
 
         #ret
       };
@@ -247,13 +247,13 @@ impl NapiFn {
     if let Some(ty) = &self.ret {
       if self.kind == FnKind::Constructor {
         if self.is_ret_result {
-          quote! { cb.construct(#js_name, #ret?) }
+          quote! { #ret.and_then(|ret| cb.construct(#js_name, ret)) }
         } else {
           quote! { cb.construct(#js_name, #ret) }
         }
       } else if self.kind == FnKind::Factory {
         if self.is_ret_result {
-          quote! { cb.factory(#js_name, #ret?) }
+          quote! { #ret.and_then(|ret| cb.factory(#js_name, ret)) }
         } else {
           quote! { cb.factory(#js_name, #ret) }
         }

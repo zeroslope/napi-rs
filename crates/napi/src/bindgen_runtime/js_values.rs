@@ -1,6 +1,9 @@
 use std::ptr;
 
-use crate::{check_status, sys, Error, JsUnknown, NapiRaw, NapiValue, Result, Status, ValueType};
+use crate::{
+  check_status, check_status_or_throw, sys, Error, JsError, JsUnknown, NapiRaw, NapiValue, Result,
+  Status, ValueType,
+};
 
 mod array;
 #[cfg(feature = "napi6")]
@@ -69,8 +72,8 @@ impl<T: NapiRaw> ToNapiValue for T {
 }
 
 impl<T: NapiValue> FromNapiValue for T {
-  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
-    Ok(T::from_raw_unchecked(env, napi_val))
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Self {
+    T::from_raw_unchecked(env, napi_val)
   }
 }
 
@@ -78,24 +81,21 @@ pub trait FromNapiValue: Sized {
   /// # Safety
   ///
   /// this function called to convert napi values to native rust values
-  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self>;
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Self;
 }
 
 pub trait FromNapiRef {
   /// # Safety
   ///
   /// this function called to convert napi values to native rust values
-  unsafe fn from_napi_ref(env: sys::napi_env, napi_val: sys::napi_value) -> Result<&'static Self>;
+  unsafe fn from_napi_ref(env: sys::napi_env, napi_val: sys::napi_value) -> &'static Self;
 }
 
 pub trait FromNapiMutRef {
   /// # Safety
   ///
   /// this function called to convert napi values to native rust values
-  unsafe fn from_napi_mut_ref(
-    env: sys::napi_env,
-    napi_val: sys::napi_value,
-  ) -> Result<&'static mut Self>;
+  unsafe fn from_napi_mut_ref(env: sys::napi_env, napi_val: sys::napi_value) -> &'static mut Self;
 }
 
 pub trait ValidateNapiValue: FromNapiValue + TypeName {
@@ -106,23 +106,24 @@ pub trait ValidateNapiValue: FromNapiValue + TypeName {
   /// # Safety
   ///
   /// this function called to validate whether napi value passed to rust is valid type
-  unsafe fn validate(env: sys::napi_env, napi_val: sys::napi_value) -> Result<()> {
+  unsafe fn validate(env: sys::napi_env, napi_val: sys::napi_value) {
     let available_types = Self::type_of();
     if available_types.is_empty() {
-      return Ok(());
+      return;
     }
 
     let mut result = 0;
-    check_status!(
+    check_status_or_throw!(
+      env,
       sys::napi_typeof(env, napi_val, &mut result),
       "Failed to detect napi value type",
-    )?;
+    );
 
     let received_type = ValueType::from(result);
     if available_types.contains(&received_type) {
-      Ok(())
+      return;
     } else {
-      Err(Error::new(
+      JsError::from(Error::new(
         Status::InvalidArg,
         if available_types.len() > 1 {
           format!(
@@ -136,6 +137,7 @@ pub trait ValidateNapiValue: FromNapiValue + TypeName {
           )
         },
       ))
+      .throw_into(env);
     }
   }
 }
@@ -154,17 +156,18 @@ impl<T> FromNapiValue for Option<T>
 where
   T: FromNapiValue,
 {
-  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Self {
     let mut val_type = 0;
 
-    check_status!(
+    check_status_or_throw!(
+      env,
       sys::napi_typeof(env, napi_val, &mut val_type),
       "Failed to convert napi value into rust type `Option<T>`",
-    )?;
+    );
 
     match val_type {
-      sys::ValueType::napi_undefined | sys::ValueType::napi_null => Ok(None),
-      _ => Ok(Some(T::from_napi_value(env, napi_val)?)),
+      sys::ValueType::napi_undefined | sys::ValueType::napi_null => None,
+      _ => Some(T::from_napi_value(env, napi_val)),
     }
   }
 }
